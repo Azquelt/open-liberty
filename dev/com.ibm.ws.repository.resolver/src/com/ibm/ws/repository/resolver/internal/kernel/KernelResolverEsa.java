@@ -96,10 +96,22 @@ public class KernelResolverEsa implements ProvisioningFeatureDefinition {
 
     @Override
     public Visibility getVisibility() {
+        switch (esaResource.getVisibility()) {
+            case PUBLIC:
+                return Visibility.PUBLIC;
+            case PROTECTED:
+                return Visibility.PROTECTED;
+            case INSTALL:
+                return Visibility.INSTALL;
+            case PRIVATE:
+                return Visibility.PRIVATE;
+            default:
+                throw new IllegalArgumentException("Invalid visibility: " + esaResource.getVisibility());
+        }
         // When resolving features for install, we don't care about visibility
         // However, the kernel resolver requires that the features requested by the user are public
         // To subvert this check, make all features report as public
-        return Visibility.PUBLIC;
+//        return Visibility.PUBLIC;
     }
 
     @Override
