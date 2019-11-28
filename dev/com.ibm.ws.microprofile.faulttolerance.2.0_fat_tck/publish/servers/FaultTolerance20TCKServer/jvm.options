@@ -1,1 +1,3 @@
 -Dcom.ibm.tools.attach.enable=yes
+-Xjit:verbose
+-verbose:gc
