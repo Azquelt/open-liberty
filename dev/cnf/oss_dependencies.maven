@@ -140,9 +140,15 @@ io.opentracing:opentracing-util:0.31.0
 io.perfmark:perfmark-api:0.20.1
 io.projectreactor:reactor-core:3.1.8.RELEASE
 io.reactivex.rxjava2:rxjava:2.2.13
+io.smallrye.reactive:mutiny:0.4.0
+io.smallrye.reactive:smallrye-mutiny-vertx-core:0.0.14
+io.smallrye.reactive:smallrye-mutiny-vertx-runtime:0.0.14
 io.smallrye.reactive:smallrye-reactive-converter-api:1.0.10
-io.smallrye.reactive:smallrye-reactive-messaging-provider:1.0.8
+io.smallrye.reactive:smallrye-reactive-messaging-api:2.0.0-SNAPSHOT
+io.smallrye.reactive:smallrye-reactive-messaging-provider:2.0.0-SNAPSHOT
 io.smallrye.reactive:smallrye-reactive-streams-operators:1.0.10
+io.smallrye.reactive:vertx-mutiny-generator:0.0.14
+io.vertx:vertx-codegen:3.8.5
 io.vertx:vertx-core:3.8.5
 jakarta.enterprise.concurrent:jakarta.enterprise.concurrent-api:2.0.0-RC1
 javax.activation:activation:1.1
@@ -443,6 +449,7 @@ org.mongodb:mongo-java-driver:1.0
 org.mongodb:mongo-java-driver:2.10.1
 org.mongodb:mongo-java-driver:2.13.3
 org.mongodb:mongo-java-driver:2.9.3
+org.mvel:mvel2:2.3.1.Final
 org.objenesis:objenesis:1.0
 org.opensaml:xmltooling:1.4.4
 org.osgi:org.osgi.annotation.versioning:1.1.0

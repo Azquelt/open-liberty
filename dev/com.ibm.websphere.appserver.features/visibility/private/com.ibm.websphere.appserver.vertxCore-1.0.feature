@@ -18,6 +18,8 @@ visibility=private
  com.ibm.ws.io.netty.transport-native-kqueue,\
  com.ibm.ws.io.netty.transport-native-unix-common,\
  com.ibm.ws.io.vertx.core,\
+ com.ibm.ws.io.vertx.codegen,\
+ com.ibm.ws.org.mvel2,\
  com.ibm.ws.com.fasterxml.jackson.2.9.1
 kind=ga
 edition=base

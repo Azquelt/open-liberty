@@ -27,7 +27,8 @@ import com.ibm.ws.cdi.extension.WebSphereCDIExtension;
 
 import io.smallrye.reactive.messaging.MediatorFactory;
 import io.smallrye.reactive.messaging.annotations.Channel;
-import io.smallrye.reactive.messaging.annotations.Stream;
+import io.smallrye.reactive.messaging.connectors.ExecutionHolder;
+import io.smallrye.reactive.messaging.connectors.WorkerPoolRegistry;
 import io.smallrye.reactive.messaging.extension.ChannelProducer;
 import io.smallrye.reactive.messaging.extension.MediatorManager;
 import io.smallrye.reactive.messaging.extension.ReactiveMessagingExtension;
@@ -46,10 +47,12 @@ public class OLReactiveMessagingExtension extends ReactiveMessagingExtension imp
         addAnnotatedType(InternalChannelRegistry.class, discovery, beanManager);
         addAnnotatedType(ConfiguredChannelFactory.class, discovery, beanManager);
         addAnnotatedType(LegacyConfiguredChannelFactory.class, discovery, beanManager);
+        addAnnotatedType(WorkerPoolRegistry.class, discovery, beanManager);
+        addAnnotatedType(ExecutionHolder.class, discovery, beanManager);
 
-        addQualifier(Stream.class, discovery, beanManager);
         addQualifier(Channel.class, discovery, beanManager);
         addQualifier(Connector.class, discovery, beanManager);
+        addQualifier(org.eclipse.microprofile.reactive.messaging.Channel.class, discovery, beanManager);
     }
 
     private <T> void addAnnotatedType(Class<T> clazz, BeforeBeanDiscovery discovery, BeanManager beanManager) {

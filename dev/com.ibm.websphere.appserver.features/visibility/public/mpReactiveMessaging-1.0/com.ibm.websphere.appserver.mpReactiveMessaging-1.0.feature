@@ -18,6 +18,10 @@ Subsystem-Name: MicroProfile Reactive Messaging 1.0
  com.ibm.websphere.appserver.vertxCore-1.0
 -bundles=com.ibm.ws.require.java8, \
  com.ibm.ws.io.smallrye.reactive.messaging-provider, \
+ com.ibm.ws.io.smallrye.reactive.mutiny, \
+ com.ibm.ws.io.smallrye.reactive.mutiny-vertx-core, \
+ com.ibm.ws.io.smallrye.reactive.mutiny-vertx-runtime, \
+ com.ibm.ws.io.smallrye.reactive.vertx-mutiny-generator, \
  com.ibm.ws.io.reactivex.rxjava.2.2, \
  com.ibm.ws.org.apache.commons.lang3, \
  com.ibm.ws.microprofile.reactive.messaging.kafka, \

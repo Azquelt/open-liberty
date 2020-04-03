@@ -1,0 +1,16 @@
+#*******************************************************************************
+# Copyright (c) 2020 IBM Corporation and others.
+# All rights reserved. This program and the accompanying materials
+# are made available under the terms of the Eclipse Public License v1.0
+# which accompanies this distribution, and is available at
+# http://www.eclipse.org/legal/epl-v10.html
+#
+# Contributors:
+#     IBM Corporation - initial API and implementation
+#*******************************************************************************
+-include= jar:${fileuri;${repo;org.mvel2;2.3.1.Final}}!/META-INF/MANIFEST.MF,bnd.overrides
+
+-includeresource: \
+   @${repo;org.mvel2;2.3.1.Final;EXACT}!/!META-INF/maven/*
+
+-buildpath: org.mvel2;version=2.3.1.Final
