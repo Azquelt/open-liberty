@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -101,7 +102,7 @@ public class KafkaPublisherVerification extends PublisherVerification<Message<St
         PartitionTrackerFactory trackerFactory = new PartitionTrackerFactory();
         trackerFactory.setExecutor(executor);
         trackerFactory.setAutoCommitEnabled(false);
-        KafkaInput<String, String> kafkaInput = new KafkaInput<>(kafkaAdapterFactory, trackerFactory, kafkaConsumer, executor, topicName, 100);
+        KafkaInput<String, String> kafkaInput = new KafkaInput<>(kafkaAdapterFactory, trackerFactory, CompletableFuture.completedFuture(kafkaConsumer), executor, topicName, 100);
         kafkaInputs.add(kafkaInput);
         return kafkaInput.getPublisher().buildRs();
     }
@@ -137,7 +138,7 @@ public class KafkaPublisherVerification extends PublisherVerification<Message<St
         PartitionTrackerFactory trackerFactory = new PartitionTrackerFactory();
         trackerFactory.setExecutor(executor);
         trackerFactory.setAutoCommitEnabled(false);
-        KafkaInput<String, String> kafkaInput = new KafkaInput<>(kafkaAdapterFactory, trackerFactory, kafkaConsumer, executor, topicName, 100);
+        KafkaInput<String, String> kafkaInput = new KafkaInput<>(kafkaAdapterFactory, trackerFactory, CompletableFuture.completedFuture(kafkaConsumer), executor, topicName, 100);
         kafkaInputs.add(kafkaInput);
         return kafkaInput.getPublisher().buildRs();
     }

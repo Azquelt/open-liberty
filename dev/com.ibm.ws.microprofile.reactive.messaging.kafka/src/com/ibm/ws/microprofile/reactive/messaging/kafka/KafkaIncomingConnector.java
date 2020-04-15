@@ -16,6 +16,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -112,7 +115,8 @@ public class KafkaIncomingConnector implements IncomingConnectorFactory {
         boolean enableAutoCommit = "true".equalsIgnoreCase((String) consumerConfig.get(KafkaConnectorConstants.ENABLE_AUTO_COMMIT));
 
         // Create the kafkaConsumer
-        KafkaConsumer<String, Object> kafkaConsumer = this.kafkaAdapterFactory.newKafkaConsumer(consumerConfig);
+        // This can throw an exception if the bootstrap.servers hostnames aren't _resolvable_
+        CompletionStage<KafkaConsumer<String, Object>> kafkaConsumer = getKafkaConsumer(consumerConfig);
 
         PartitionTrackerFactory partitionTrackerFactory = new PartitionTrackerFactory();
         partitionTrackerFactory.setExecutor(executor);
@@ -129,6 +133,27 @@ public class KafkaIncomingConnector implements IncomingConnectorFactory {
         kafkaInputs.add(kafkaInput);
 
         return kafkaInput.getPublisher();
+    }
+
+    private CompletionStage<KafkaConsumer<String, Object>> getKafkaConsumer(Map<String, Object> consumerConfig) {
+        CompletableFuture<KafkaConsumer<String, Object>> result = new CompletableFuture();
+        getKafkaConsumer(consumerConfig, result);
+        return result;
+    }
+
+    private void getKafkaConsumer(Map<String, Object> consumerConfig, CompletableFuture<KafkaConsumer<String, Object>> result) {
+        try {
+            KafkaConsumer<String, Object> kafkaConsumer = this.kafkaAdapterFactory.newKafkaConsumer(consumerConfig);
+            result.complete(kafkaConsumer);
+        } catch (Exception t) {
+            // WARN: unable to create Consumer, retrying in 5 seconds
+            Tr.warning(tc, "Unable to create KafkaConsumer, retrying in 5 seconds");
+            executor.schedule(() -> getKafkaConsumer(consumerConfig, result), 5, TimeUnit.SECONDS);
+        } catch (Throwable t) {
+            // ERROR: unable to create Consumer, the error was {1}
+            Tr.error(tc, "Unable to create KafkaConsumer, the error was {0}", t);
+            result.completeExceptionally(t);
+        }
     }
 
 }

@@ -49,12 +49,12 @@ import com.ibm.ws.microprofile.reactive.messaging.kafka.adapter.WakeupException;
  * @param V
  *            the value type
  */
-public class KafkaInput<K, V> implements ConsumerRebalanceListener {
+public class KafkaInput<K, V> {
 
     private static final TraceComponent tc = Tr.register(KafkaInput.class);
     private static final Duration FOREVER = Duration.ofMillis(Long.MAX_VALUE);
 
-    private final KafkaConsumer<K, V> kafkaConsumer;
+    private final CompletionStage<KafkaConsumer<K, V>> kafkaConsumerStage;
     private final ExecutorService executor;
     private final Collection<String> topics;
 
@@ -79,10 +79,10 @@ public class KafkaInput<K, V> implements ConsumerRebalanceListener {
     private final ReentrantLock lock = new ReentrantLock();
 
     public KafkaInput(KafkaAdapterFactory kafkaAdapterFactory, PartitionTrackerFactory partitionTrackerFactory,
-                      KafkaConsumer<K, V> kafkaConsumer, ExecutorService executor,
+                      CompletionStage<KafkaConsumer<K, V>> kafkaConsumerStage, ExecutorService executor,
                       String topic, int unackedLimit) {
         super();
-        this.kafkaConsumer = kafkaConsumer;
+        this.kafkaConsumerStage = kafkaConsumerStage;
         this.executor = executor;
         this.topics = Collections.singleton(topic);
         this.tasks = new ConcurrentLinkedQueue<>();
@@ -106,7 +106,9 @@ public class KafkaInput<K, V> implements ConsumerRebalanceListener {
     private PublisherBuilder<Message<V>> createPublisher() {
         PublisherBuilder<Message<V>> kafkaStream;
         kafkaStream = ReactiveStreams.generate(() -> 0)
-                                     .flatMapCompletionStage(x -> unackedMessageCounter.waitForBelowThreshold().thenCompose(y -> pollKafkaAsync()))
+                                     .flatMapCompletionStage(x -> unackedMessageCounter.waitForBelowThreshold()
+                                                                                       .thenCompose(y -> kafkaConsumerStage)
+                                                                                       .thenCompose(this::pollKafkaAsync))
                                      .flatMap(Function.identity())
                                      .peek(x -> unackedMessageCounter.increment())
                                      .takeWhile((record) -> this.running);
@@ -150,14 +152,16 @@ public class KafkaInput<K, V> implements ConsumerRebalanceListener {
             Tr.event(tc, "Shutting down Kafka connection");
         }
 
-        this.running = false;
-        this.kafkaConsumer.wakeup();
-        this.lock.lock();
-        try {
-            this.kafkaConsumer.close();
-        } finally {
-            this.lock.unlock();
-        }
+        kafkaConsumerStage.thenAccept(kafkaConsumer -> {
+            this.running = false;
+            kafkaConsumer.wakeup();
+            this.lock.lock();
+            try {
+                kafkaConsumer.close();
+            } finally {
+                this.lock.unlock();
+            }
+        });
 
         for (PartitionTracker tracker : partitionTrackers.values()) {
             tracker.close();
@@ -165,11 +169,11 @@ public class KafkaInput<K, V> implements ConsumerRebalanceListener {
     }
 
     @FFDCIgnore({ WakeupException.class, RejectedExecutionException.class })
-    private CompletionStage<PublisherBuilder<Message<V>>> pollKafkaAsync() {
+    private CompletionStage<PublisherBuilder<Message<V>>> pollKafkaAsync(KafkaConsumer<K, V> kafkaConsumer) {
         if (!this.subscribed) {
             this.lock.lock();
             try {
-                this.kafkaConsumer.subscribe(this.topics, this);
+                kafkaConsumer.subscribe(this.topics, new RebalanceListener(kafkaConsumer));
                 this.subscribed = true;
             } finally {
                 this.lock.unlock();
@@ -190,14 +194,14 @@ public class KafkaInput<K, V> implements ConsumerRebalanceListener {
 
         while (this.lock.tryLock()) {
             try {
-                records = this.kafkaConsumer.poll(ZERO);
+                records = kafkaConsumer.poll(ZERO);
                 break;
             } catch (WakeupException e) {
                 // Asked to stop polling, probably means there are pending actions to process
             } finally {
                 this.lock.unlock();
             }
-            runPendingActions();
+            runPendingActions(kafkaConsumer);
         }
 
         if ((records != null) && !records.isEmpty()) {
@@ -205,7 +209,7 @@ public class KafkaInput<K, V> implements ConsumerRebalanceListener {
         } else {
             try {
                 this.executor.submit(() -> {
-                    executePollActions(result);
+                    executePollActions(result, kafkaConsumer);
                 });
             } catch (RejectedExecutionException e) {
                 //by far the most likely reason for this exception is the server is being shutdown
@@ -223,13 +227,13 @@ public class KafkaInput<K, V> implements ConsumerRebalanceListener {
      * Run any pending actions and then poll Kafka for messages.
      */
     @FFDCIgnore(WakeupException.class)
-    private void executePollActions(CompletableFuture<PublisherBuilder<Message<V>>> result) {
+    private void executePollActions(CompletableFuture<PublisherBuilder<Message<V>>> result, KafkaConsumer<K, V> kafkaConsumer) {
         this.lock.lock();
         try {
             while (this.running) {
                 try {
-                    runPendingActions();
-                    ConsumerRecords<K, V> asyncRecords = this.kafkaConsumer.poll(FOREVER);
+                    runPendingActions(kafkaConsumer);
+                    ConsumerRecords<K, V> asyncRecords = kafkaConsumer.poll(FOREVER);
                     result.complete(wrapInMessageStream(asyncRecords));
                     break;
                 } catch (WakeupException e) {
@@ -243,7 +247,7 @@ public class KafkaInput<K, V> implements ConsumerRebalanceListener {
         } finally {
             this.lock.unlock();
         }
-        runPendingActions();
+        runPendingActions(kafkaConsumer);
     }
 
     private PublisherBuilder<Message<V>> wrapInMessageStream(ConsumerRecords<K, V> records) {
@@ -292,15 +296,17 @@ public class KafkaInput<K, V> implements ConsumerRebalanceListener {
      */
     public void runAction(KafkaConsumerAction action) {
         this.tasks.add(action);
-        this.kafkaConsumer.wakeup();
-        runPendingActions();
+        kafkaConsumerStage.thenAccept(kafkaConsumer -> {
+            kafkaConsumer.wakeup();
+            runPendingActions(kafkaConsumer);
+        });
     }
 
     /**
      * Run pending actions if no other threads are running actions or polling the
      * broker
      */
-    private void runPendingActions() {
+    private void runPendingActions(KafkaConsumer<K, V> kafkaConsumer) {
         while (!this.tasks.isEmpty() && this.lock.tryLock()) {
             try {
                 if (!this.running) {
@@ -310,7 +316,7 @@ public class KafkaInput<K, V> implements ConsumerRebalanceListener {
                 KafkaConsumerAction task = null;
                 while ((task = this.tasks.poll()) != null) {
                     try {
-                        task.run(this.kafkaConsumer);
+                        task.run(kafkaConsumer);
                     } catch (Throwable t) {
                         Tr.error(tc, "internal.kafka.connector.error.CWMRX1000E", t);
                         throw t;
@@ -327,25 +333,36 @@ public class KafkaInput<K, V> implements ConsumerRebalanceListener {
         void run(KafkaConsumer<?, ?> consumer);
     }
 
-    /** {@inheritDoc} */
-    @Override
-    public void onPartitionsRevoked(Collection<TopicPartition> partitions) {
-        Map<TopicPartition, PartitionTracker> newMap = new HashMap<>(partitionTrackers);
-        for (TopicPartition partition : partitions) {
-            newMap.get(partition).close();
-            newMap.remove(partition);
-        }
-        partitionTrackers = newMap;
-    }
+    private class RebalanceListener implements ConsumerRebalanceListener {
 
-    /** {@inheritDoc} */
-    @Override
-    public void onPartitionsAssigned(Collection<TopicPartition> partitions) {
-        Map<TopicPartition, PartitionTracker> newMap = new HashMap<>(partitionTrackers);
-        for (TopicPartition partition : partitions) {
-            newMap.put(partition, partitionTrackerFactory.create(this, partition, kafkaConsumer.position(partition)));
-        }
-        partitionTrackers = newMap;
-    }
+        private final KafkaConsumer<K, V> kafkaConsumer;
 
+        /**
+         * @param kafkaConsumer
+         */
+        public RebalanceListener(KafkaConsumer<K, V> kafkaConsumer) {
+            this.kafkaConsumer = kafkaConsumer;
+        }
+
+        /** {@inheritDoc} */
+        @Override
+        public void onPartitionsRevoked(Collection<TopicPartition> partitions) {
+            Map<TopicPartition, PartitionTracker> newMap = new HashMap<>(partitionTrackers);
+            for (TopicPartition partition : partitions) {
+                newMap.get(partition).close();
+                newMap.remove(partition);
+            }
+            partitionTrackers = newMap;
+        }
+
+        /** {@inheritDoc} */
+        @Override
+        public void onPartitionsAssigned(Collection<TopicPartition> partitions) {
+            Map<TopicPartition, PartitionTracker> newMap = new HashMap<>(partitionTrackers);
+            for (TopicPartition partition : partitions) {
+                newMap.put(partition, partitionTrackerFactory.create(KafkaInput.this, partition, kafkaConsumer.position(partition)));
+            }
+            partitionTrackers = newMap;
+        }
+    }
 }
