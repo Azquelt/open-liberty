@@ -2,6 +2,7 @@ package io.openliberty.microprofile.openapi20.fat.deployments;
 
 import static com.ibm.websphere.simplicity.ShrinkHelper.DeployOptions.DISABLE_VALIDATION;
 import static com.ibm.websphere.simplicity.ShrinkHelper.DeployOptions.SERVER_ONLY;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
@@ -10,9 +11,14 @@ import static org.junit.Assert.assertThat;
 
 import java.util.Collections;
 import java.util.function.Consumer;
+import java.util.logging.Logger;
 
 import org.jboss.shrinkwrap.api.Archive;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
+import org.jboss.shrinkwrap.api.asset.Asset;
+import org.jboss.shrinkwrap.api.asset.EmptyAsset;
+import org.jboss.shrinkwrap.api.asset.StringAsset;
+import org.jboss.shrinkwrap.api.exporter.ZipExporter;
 import org.jboss.shrinkwrap.api.spec.EnterpriseArchive;
 import org.jboss.shrinkwrap.api.spec.JavaArchive;
 import org.jboss.shrinkwrap.api.spec.WebArchive;
@@ -29,6 +35,9 @@ import com.ibm.websphere.simplicity.PropertiesAsset;
 import com.ibm.websphere.simplicity.RemoteFile;
 import com.ibm.websphere.simplicity.ShrinkHelper;
 import com.ibm.websphere.simplicity.config.Application;
+import com.ibm.websphere.simplicity.config.ClassloaderElement;
+import com.ibm.websphere.simplicity.config.File;
+import com.ibm.websphere.simplicity.config.Library;
 import com.ibm.websphere.simplicity.config.ServerConfiguration;
 
 import componenttest.annotation.Server;
@@ -39,6 +48,8 @@ import componenttest.topology.utils.HttpRequest;
 import componenttest.topology.utils.LibertyServerUtils;
 import io.openliberty.microprofile.openapi20.fat.deployments.test1.DeploymentTestApp;
 import io.openliberty.microprofile.openapi20.fat.deployments.test1.DeploymentTestResource;
+import io.openliberty.microprofile.openapi20.fat.deployments.test1.DeploymentTestResult;
+import io.openliberty.microprofile.openapi20.fat.deployments.test1.DeploymentTestResultResource;
 import io.openliberty.microprofile.openapi20.fat.deployments.test2.DeploymentTestResource2;
 import io.openliberty.microprofile.openapi20.fat.utils.OpenAPIConnection;
 import io.openliberty.microprofile.openapi20.fat.utils.OpenAPITestUtil;
@@ -51,7 +62,7 @@ public class DeploymentTest {
 
     @Server("OpenAPITestServer")
     public static LibertyServer server;
-    
+
     /**
      * Add configuration to only scan the test resource class
      * <p>
@@ -182,24 +193,169 @@ public class DeploymentTest {
         assertOpenApiDoc();
         assertCache(war, CacheUsed.CACHE_NOT_USED, CacheWritten.CACHE_NOT_WRITTEN);
     }
+
+    @Test
+    public void testEarLib() throws Exception {
+        JavaArchive jar = ShrinkWrap.create(JavaArchive.class, "testJar.jar")
+                                    .addClasses(DeploymentTestResource.class)
+                                    .addAsResource(SCAN_CONFIG, "META-INF/microprofile-config.properties");
+        WebArchive war = ShrinkWrap.create(WebArchive.class, "testWar.war")
+                                   .addClasses(DeploymentTestApp.class);
+        
+        EnterpriseArchive ear = ShrinkWrap.create(EnterpriseArchive.class, "testEar.ear")
+                        .addAsModule(war)
+                        .addAsLibrary(jar);
+
+        deployApp(ear);
+
+        assertRest();
+        assertOpenApiDoc();
+        assertCache(ear, CacheUsed.CACHE_USED, CacheWritten.CACHE_NOT_WRITTEN);
+    }
+
+    @Test
+    public void testWarLibResponseType() throws Exception {
+        JavaArchive jar = ShrinkWrap.create(JavaArchive.class, "testJar.jar")
+                                    .addClasses(DeploymentTestResult.class);
+
+        WebArchive war = ShrinkWrap.create(WebArchive.class, "testWar.war")
+                                   .addClasses(DeploymentTestResultResource.class)
+                                   .addClasses(DeploymentTestApp.class)
+                                   .addAsLibrary(jar);
+
+        deployApp(war);
+
+        String response = new HttpRequest(server, "/testWar/test").run(String.class);
+        assertThat("Failed to call test resource", response, containsString("OK"));
+
+        JsonNode openapiNode = getOpenApiDoc();
+        OpenAPITestUtil.checkPaths(openapiNode, 1, "/test");
+        OpenAPITestUtil.checkSchema(openapiNode, "DeploymentTestResult", "result", "error_code");
+        
+        assertCache(war, CacheUsed.CACHE_USED, CacheWritten.CACHE_NOT_WRITTEN);
+    }
+
+
+    @Test
+    public void testEarLibResponseType() throws Exception {
+        JavaArchive jar = ShrinkWrap.create(JavaArchive.class, "testJar.jar")
+                                    .addClasses(DeploymentTestResult.class);
+
+        WebArchive war = ShrinkWrap.create(WebArchive.class, "testWar.war")
+                                   .addClasses(DeploymentTestResultResource.class)
+                                   .addClasses(DeploymentTestApp.class);
+
+        EnterpriseArchive ear = ShrinkWrap.create(EnterpriseArchive.class, "testEarLib.ear")
+                                          .addAsModule(war)
+                                          .addAsLibrary(jar);
+
+        deployApp(ear);
+
+        String response = new HttpRequest(server, "/testWar/test").run(String.class);
+        assertThat("Failed to call test resource", response, containsString("OK"));
+
+        JsonNode openapiNode = getOpenApiDoc();
+        OpenAPITestUtil.checkPaths(openapiNode, 1, "/test");
+        OpenAPITestUtil.checkSchema(openapiNode, "DeploymentTestResult", "result", "error_code");
+        
+        assertCache(ear, CacheUsed.CACHE_NOT_USED, CacheWritten.CACHE_WRITTEN);
+    }
+
+    @Test
+    public void testWarServerXmlLib() throws Exception {
+        JavaArchive jar = ShrinkWrap.create(JavaArchive.class, "testJar.jar")
+                                    .addClasses(DeploymentTestApp.class, DeploymentTestResource.class)
+                                    .addAsResource(SCAN_CONFIG, "META-INF/microprofile-config.properties");
+        WebArchive war = ShrinkWrap.create(WebArchive.class, "testWarServerXmlLib.war")
+                        .addAsResource(EmptyAsset.INSTANCE, "dummy.txt");
+
+        ShrinkHelper.exportToServer(server, "testLibs", jar, SERVER_ONLY);
+
+        File file = new File();
+        file.setName("testLibs/testJar.jar");
+        Library lib = new Library();
+        lib.getFiles().add(file);
+        lib.setId("testJar");
+        ClassloaderElement e = new ClassloaderElement();
+        e.getPrivateLibraryRefs().add("testJar");
+        deployApp(war, c -> {
+            c.getLibraries().add(lib);
+            c.getApplications().get(0).getClassloaders().add(e);
+        });
+
+        assertRest();
+        assertOpenApiDoc();
+        assertCache(war, CacheUsed.CACHE_USED, CacheWritten.CACHE_NOT_WRITTEN);
+    }
     
+    @Test
+    public void testEarServerXmlLib() throws Exception {
+        JavaArchive jar = ShrinkWrap.create(JavaArchive.class, "testJar.jar")
+                                    .addClasses(DeploymentTestResult.class);
+
+        WebArchive war = ShrinkWrap.create(WebArchive.class, "testWar.war")
+                                   .addClasses(DeploymentTestResultResource.class)
+                                   .addClasses(DeploymentTestApp.class);
+
+        EnterpriseArchive ear = ShrinkWrap.create(EnterpriseArchive.class, "testEarServerXmlLib.ear")
+                                          .addAsModule(war);
+        
+        ShrinkHelper.exportToServer(server, "testLibs", jar, SERVER_ONLY);
+
+        File file = new File();
+        file.setName("testLibs/testJar.jar");
+        Library lib = new Library();
+        lib.getFiles().add(file);
+        lib.setId("testJar");
+        ClassloaderElement e = new ClassloaderElement();
+        e.getPrivateLibraryRefs().add("testJar");
+        deployApp(ear, c -> {
+            c.getLibraries().add(lib);
+            c.getApplications().get(0).getClassloaders().add(e);
+        });
+
+        String response = new HttpRequest(server, "/testWar/test").run(String.class);
+        assertThat("Failed to call test resource", response, containsString("OK"));
+
+        assertOpenApiDoc();
+        assertCache(ear, CacheUsed.CACHE_NOT_USED, CacheWritten.CACHE_WRITTEN);
+    }
+    
+    @Test
+    public void testWarClasspathLib() throws Exception {
+        JavaArchive jar = ShrinkWrap.create(JavaArchive.class, "testJar.jar")
+                                    .addClasses(DeploymentTestApp.class, DeploymentTestResource.class);
+        JavaArchive libJar = ShrinkWrap.create(JavaArchive.class, "libJar.jar")
+                        .addAsManifestResource(createManifest("/testJar.jar"), "MANIFEST.MF");
+        WebArchive war = ShrinkWrap.create(WebArchive.class, "testWarServerXmlLib.war")
+                        .addAsLibrary(libJar)
+                        .add(jar, "/", ZipExporter.class);
+
+        deployApp(war);
+
+        assertRest();
+        assertOpenApiDoc();
+        assertCache(war, CacheUsed.CACHE_USED, CacheWritten.CACHE_NOT_WRITTEN);
+    }
+
+
+
     @Test
     public void testLooseWarWithLib() throws Exception {
         copyLoosePackage(server, "looseFiles/warClasses", DeploymentTestResource.class.getPackage().getName());
         copyLoosePackage(server, "looseFiles/libClasses", DeploymentTestResource2.class.getPackage().getName());
         deployLooseApp("looseWar.war.xml", "war");
-        
+
         String response = new HttpRequest(server, "/looseWar.war/test").run(String.class);
         assertEquals("Failed to call test resource", "OK", response);
         String response2 = new HttpRequest(server, "/looseWar.war/test2").run(String.class);
         assertEquals("Failed to call test resource", "OK", response2);
 
-        
         String doc = OpenAPIConnection.openAPIDocsConnection(server, false).download();
         JsonNode openapiNode = OpenAPITestUtil.readYamlTree(doc);
         OpenAPITestUtil.checkPaths(openapiNode, 2, "/test", "/test2");
     }
-    
+
     private void copyLoosePackage(LibertyServer server, String looseDir, String packageName) throws Exception {
         String packageDir = packageName.replace('.', '/');
         RemoteFile remoteDirClasses = LibertyFileManager.createRemoteFile(server.getMachine(), server.getServerRoot() + "/" + looseDir + "/" + packageDir);
@@ -227,9 +383,14 @@ public class DeploymentTest {
     }
 
     private void assertOpenApiDoc() throws Exception {
-        String doc = OpenAPIConnection.openAPIDocsConnection(server, false).download();
-        JsonNode openapiNode = OpenAPITestUtil.readYamlTree(doc);
+        JsonNode openapiNode = getOpenApiDoc();
         OpenAPITestUtil.checkPaths(openapiNode, 1, "/test");
+    }
+    
+    private JsonNode getOpenApiDoc() throws Exception {
+        String doc = OpenAPIConnection.openAPIDocsConnection(server, false).download();
+        Logger.getLogger(DeploymentTest.class.getName()).info(doc);
+        return OpenAPITestUtil.readYamlTree(doc);
     }
 
     /**
@@ -270,6 +431,17 @@ public class DeploymentTest {
             assertThat(server.findStringsInLogsAndTraceUsingMark("Cache entry written"), is(empty()));
         }
     }
+    
+    private Asset createManifest(String... classpathEntries) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Manifest-Version: 1.0\n");
+        sb.append("Class-Path: ");
+        for (String e : classpathEntries) {
+            sb.append(e).append(" ");
+        }
+        sb.append("\n");
+        return new StringAsset(sb.toString());
+    }
 
     private enum CacheUsed {
         CACHE_USED,
@@ -296,10 +468,10 @@ public class DeploymentTest {
         server.updateServerConfiguration(config);
         server.waitForConfigUpdateInLogUsingMark(Collections.singleton(getName(archive)));
     }
-    
+
     private void deployLooseApp(String fileName, String type) throws Exception {
         server.copyFileToLibertyServerRoot("apps", fileName);
-        
+
         server.setMarkToEndOfLog();
         ServerConfiguration config = server.getServerConfiguration();
         Application appConfig = new Application();
@@ -314,7 +486,7 @@ public class DeploymentTest {
     private String getName(Archive<?> archive) {
         return getName(archive.getName());
     }
-    
+
     private String getName(String fileName) {
         int lastDot = fileName.lastIndexOf('.');
         if (lastDot != -1) {

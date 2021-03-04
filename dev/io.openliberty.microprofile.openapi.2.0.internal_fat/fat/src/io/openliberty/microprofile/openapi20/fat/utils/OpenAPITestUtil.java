@@ -205,6 +205,19 @@ public class OpenAPITestUtil {
         server.getServerConfiguration().getApplications().stream().forEach(app -> removeApplication(server, app.getName()));
     }
 
+    /**
+     * Assert that a given JsonNode is an object and cast it
+     * 
+     * @param node the node
+     * @return the node
+     * @throws AssertionError if the node is {@code null} or not an object
+     */
+    private static ObjectNode asObject(JsonNode node) {
+        assertNotNull(node);
+        assertTrue(node.isObject());
+        return (ObjectNode) node;
+    }
+
     public static void checkServer(JsonNode root, String... expectedUrls) {
         JsonNode serversNode = root.get("servers");
         assertNotNull(serversNode);
@@ -226,7 +239,18 @@ public class OpenAPITestUtil {
         List<String> expected = Arrays.asList(containedPaths);
         expected.stream().forEach(path -> assertNotNull("FAIL: OpenAPI document does not contain the expected path " + path, paths.get(path)));
     }
-
+    
+    public static void checkSchema(JsonNode root, String schemaName, String... expectedProperties) {
+        ObjectNode components = asObject(root.get("components"));
+        ObjectNode schemas = asObject(components.get("schemas"));
+        ObjectNode schema = asObject(schemas.get(schemaName)); // asserts presence of expected schema
+        ObjectNode properties = asObject(schema.get("properties"));
+        
+        for (String expectedProperty : expectedProperties) {
+            assertNotNull(properties.get(expectedProperty));
+        }
+    }
+    
     public static void checkInfo(JsonNode root, String defaultTitle, String defaultVersion) {
         JsonNode infoNode = root.get("info");
         assertNotNull(infoNode);
