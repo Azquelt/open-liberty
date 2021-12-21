@@ -18,7 +18,7 @@ Multi-Release: true
 # Only publish the Jakarta one
 publish.wlp.jar.include: io.openliberty.org.jboss.resteasy.mprestclient.jakarta.jar
 
-resteasy-version=4.7.2.Final
+resteasy-version=4.7.5.SNAPSHOT
 
 src: src
 

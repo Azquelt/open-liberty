@@ -16,7 +16,7 @@ Bundle-SymbolicName: io.openliberty.org.jboss.resteasy.jaxb.provider
 # Only publish the Jakarta one
 publish.wlp.jar.include: io.openliberty.org.jboss.resteasy.jaxb.provider.jakarta.jar
 
-resteasy-version=4.7.2.Final
+resteasy-version=4.7.5.SNAPSHOT
 
 app-resources= \
   META-INF/services/javax.ws.rs.ext.Providers

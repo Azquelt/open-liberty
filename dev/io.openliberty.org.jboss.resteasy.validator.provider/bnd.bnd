@@ -16,7 +16,7 @@ Bundle-SymbolicName: io.openliberty.org.jboss.resteasy.validator.provider
 # Only publish the Jakarta one
 publish.wlp.jar.include: io.openliberty.org.jboss.resteasy.validator.provider.jakarta.jar
 
-resteasy-version=4.7.2.Final
+resteasy-version=4.7.5.SNAPSHOT
 
 src: src
 

@@ -24,6 +24,7 @@ import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Set;
 
+import javax.enterprise.inject.spi.AnnotatedType;
 import javax.enterprise.inject.spi.BeanManager;
 
 import org.jboss.resteasy.client.jaxrs.ResteasyClient;
@@ -39,8 +40,9 @@ public class DefaultMethodInvocationHandler implements InvocationHandler {
                                           final Object target,
                                           final Set<Object> providerInstances,
                                           final ResteasyClient client,
-                                          final BeanManager beanManager) {
-        this.delegateHandler = new ProxyInvocationHandler(restClientInterface, target, providerInstances, client, beanManager);
+                                          final BeanManager beanManager,
+                                          final AnnotatedType<?> annotatedType) {
+        this.delegateHandler = new ProxyInvocationHandler(restClientInterface, target, providerInstances, client, beanManager, annotatedType);
         this.restClientInterface = restClientInterface;
         this.target = createDefaultMethodTarget(restClientInterface);
     }
