@@ -15,8 +15,9 @@ jobs:
     - name: Use Node.js v16
       uses: actions/setup-node@v2
       with:
-        node-version: 16.x
+        node-version: '16'
         cache: 'npm'
+      working-directory: ./dev/com.ibm.ws.openapi.ui/swagger-ui
     - run: npx --yes npm-check-updates
     - run: npx --yes npm-check-updates -u
     - run: npm update
