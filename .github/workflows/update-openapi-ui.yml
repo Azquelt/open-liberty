@@ -17,7 +17,7 @@ jobs:
       with:
         node-version: '16'
         cache: 'npm'
-      working-directory: ./dev/com.ibm.ws.openapi.ui/swagger-ui
+        cache-dependency-path: ./dev/com.ibm.ws.openapi.ui/swagger-ui/package-lock.json
     - run: npx --yes npm-check-updates
     - run: npx --yes npm-check-updates -u
     - run: npm update
