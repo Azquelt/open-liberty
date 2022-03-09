@@ -1,0 +1,34 @@
+# Update the dependencies of the OpenAPI UI and rebuild it, then create a pull request with the changes
+
+name: Update OpenAPI UI dependencies
+
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./dev/com.ibm.ws.openapi.ui/swagger-ui
+    steps:
+    - uses: actions/checkout@v2
+    - name: Use Node.js v16
+      uses: actions/setup-node@v2
+      with:
+        node-version: 16.x
+        cache: 'npm'
+    - run: npx --yes npm-check-updates
+    - run: npx --yes npm-check-updates -u
+    - run: npm update
+    - run: echo "SWAGGER_UI_VERSION=$(jq -r '.packages."node_modules/swagger-ui".version' package-lock.json)" >> $GITHUB_ENV
+    - run: git clone --depth 1 -b v${SWAGGER_UI_VERSION} https://github.com/swagger-api/swagger-ui.git swagger-ui-src
+    - run: rm src/style/original/*
+    - run: cp swagger-ui-src/src/style/* src/style/original
+    - run: npm run build -- --mode=production
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v3
+      with:
+        branch: update-swagger-ui-${{ env.SWAGGER_UI_VERSION }}
+        title: Update Swagger UI to ${{ env.SWAGGER_UI_VERSION }}
+        body: Update Swagger UI and its dependencies and rebuild the OpenAPI UI
+        labels: in:MicroProfile/OpenAPI, team:MicroprofileUK
