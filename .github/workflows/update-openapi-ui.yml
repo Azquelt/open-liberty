@@ -46,7 +46,7 @@ jobs:
         commit-message: Update Swagger UI to ${{ env.SWAGGER_UI_VERSION }} [auto]
         body: Update Swagger UI and its dependencies and rebuild the OpenAPI UI
         labels: in:MicroProfile/OpenAPI, team:MicroprofileUK
-    - name: Created PR
+    - name: Created PR information
       if: ${{ steps.create-pr.outputs.pull-request-number }}
       run: 'echo "Pull Request created: ${{ steps.create-pr.outputs.pull-request-url }}"'
     outputs:
