@@ -28,7 +28,7 @@ jobs:
       run: |
         export SWAGGER_UI_VERSION=$(jq -r '.packages."node_modules/swagger-ui".version' package-lock.json)
         echo "SWAGGER_UI_VERSION=$SWAGGER_UI_VERSION" >> $GITHUB_ENV
-        echo "Swagger UI version: $SWAGGER_UI_VERSION
+        echo "Swagger UI version: $SWAGGER_UI_VERSION"
     - name: Copy SCSS from Swagger UI source
       run: |
         git clone --depth 1 -b v${SWAGGER_UI_VERSION} https://github.com/swagger-api/swagger-ui.git swagger-ui-src
