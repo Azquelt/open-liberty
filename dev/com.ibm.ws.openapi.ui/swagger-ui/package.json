@@ -31,6 +31,7 @@
     "webpack-dev-server": "^4.7.4"
   },
   "dependencies": {
+    "buffer": "^6.0.3",
     "core-js": "^3.21.0",
     "regenerator-runtime": "^0.13.9",
     "stream-browserify": "^3.0.0",
