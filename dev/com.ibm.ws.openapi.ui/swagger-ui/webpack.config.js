@@ -5,6 +5,7 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const postcssPresetEnv = require('postcss-preset-env');
 const cssnano = require('cssnano');
+const NodePolyfillPlugin = require("node-polyfill-webpack-plugin")
 
 const outputPath = path.resolve(__dirname, 'dist');
 
@@ -105,7 +106,7 @@ module.exports = {
         {
           // Copy the Swagger OAuth2 redirect file to the project root;
           // that file handles the OAuth2 redirect after authenticating the end-user.
-          from: require.resolve('swagger-ui/dist/oauth2-redirect.html'),
+          from: 'node_modules/swagger-ui/dist/oauth2-redirect.html',
           to: './'
         },
         {
@@ -135,12 +136,14 @@ module.exports = {
     }),
     new MiniCssExtractPlugin({
       filename: '[name]-[contenthash].css'
-    })
+    }),
+    new NodePolyfillPlugin()
   ],
   output: {
     filename: '[name]-bundle-[contenthash].js',
     path: outputPath,
     library: 'SwaggerUI',
     publicPath: '' // Needed for IE
-  }
+  },
+  ignoreWarnings: [/Failed to parse source map/],
 };

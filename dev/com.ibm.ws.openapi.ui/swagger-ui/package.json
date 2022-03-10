@@ -19,6 +19,7 @@
     "cssnano": "^5.0.16",
     "html-webpack-plugin": "^5.5.0",
     "mini-css-extract-plugin": "^2.5.3",
+    "node-polyfill-webpack-plugin": "^1.1.4",
     "postcss-loader": "^6.2.1",
     "postcss-preset-env": "^7.3.1",
     "sass": "^1.49.7",
