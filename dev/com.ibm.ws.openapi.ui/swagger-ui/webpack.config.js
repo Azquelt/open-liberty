@@ -5,6 +5,7 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const postcssPresetEnv = require('postcss-preset-env');
 const cssnano = require('cssnano');
+const { ProvidePlugin } = require('webpack');
 
 const outputPath = path.resolve(__dirname, 'dist');
 
@@ -139,7 +140,10 @@ module.exports = {
     }),
     new MiniCssExtractPlugin({
       filename: '[name]-[contenthash].css'
-    })
+    }),
+    new ProvidePlugin({
+      Buffer: ['buffer', 'Buffer'],
+    }),
   ],
   output: {
     filename: '[name]-bundle-[contenthash].js',
