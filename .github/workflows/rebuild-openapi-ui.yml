@@ -1,0 +1,39 @@
+name: Rebuild OpenAPI UI dependencies
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to check out and commit to'
+        required: true
+        type: string
+
+jobs:
+  update-openapi-ui:
+    name: Rebuild OpenAPI UI
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./dev/com.ibm.ws.openapi.ui/swagger-ui
+    steps:
+    - name: Checkout Open Liberty
+      uses: actions/checkout@v3
+      with:
+        ref: ${{ inputs.branch }}
+    - name: Use Node.js v16
+      uses: actions/setup-node@v2
+      with:
+        node-version: '16'
+        cache: 'npm'
+        cache-dependency-path: ./dev/com.ibm.ws.openapi.ui/swagger-ui/package-lock.json
+    - name: Build OpenAPI UI
+      run: |
+        npm ci
+        npm run build -- --mode=production
+    - name: Commit changes
+      run: |
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+        git add .
+        git commit -m "Rebuild OpenAPI UI"
+        git push
