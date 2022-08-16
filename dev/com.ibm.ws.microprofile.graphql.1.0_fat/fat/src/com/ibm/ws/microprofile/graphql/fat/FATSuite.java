@@ -20,9 +20,10 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 import org.junit.runners.Suite.SuiteClasses;
 
-import componenttest.rules.repeater.FeatureReplacementAction;
-import componenttest.rules.repeater.JakartaEE9Action;
+import componenttest.custom.junit.runner.Mode.TestMode;
+import componenttest.rules.repeater.FeatureSet;
 import componenttest.rules.repeater.MicroProfileActions;
+import componenttest.rules.repeater.RepeatActions;
 import componenttest.rules.repeater.RepeatTests;
 
 
@@ -46,27 +47,39 @@ import componenttest.rules.repeater.RepeatTests;
                 VoidQueryTest.class
 })
 public class FATSuite {
-    @ClassRule
-    public static RepeatTests r = RepeatTests.withoutModification()
-                                             .andWith(new FeatureReplacementAction("mpConfig-1.4", "mpConfig-2.0")
-                                                      .addFeature("mpMetrics-3.0").removeFeature("mpMetrics-2.3")
-                                                      .addFeature("mpRestClient-2.0").removeFeature("mpRestClient-1.4")
-                                                      .withID("mp4.0"))
-                                             .andWith(new JakartaEE9Action()
-                                                      .removeFeatures(setOf("mpConfig-1.4", "mpConfig-2.0")).addFeature("mpConfig-3.0")
-                                                      .removeFeatures(setOf("mpMetrics-3.0", "mpMetrics-2.3")).addFeature("mpMetrics-4.0")
-                                                      .removeFeatures(setOf("mpRestClient-2.0", "mpRestClient-1.4")).addFeature("mpRestClient-3.0")
-                                                      .removeFeature("mpGraphQL-1.0").addFeature("mpGraphQL-2.0")
-                                                      .withID(MicroProfileActions.STANDALONE9_ID));
 
-    private static Set<String> setOf(String... strings) {
-        // basically does what Java 11's Set.of(...) does
-        Set<String> set = new HashSet<>();
-        for(String s : strings) {
-            set.add(s);
-        }
-        return set;
+    public static final FeatureSet MP33_GRAPHQL = MicroProfileActions.MP33
+                    .addFeature("mpGraphQL-1.0")
+                    .build(MicroProfileActions.MP33_ID + "_GraphQL_10");
+    
+    public static final FeatureSet MP40_GRAPHQL = MicroProfileActions.MP40
+                    .addFeature("mpGraphQL-1.0")
+                    .build(MicroProfileActions.MP40_ID + "_GraphQL_10");
+    
+    public static final FeatureSet MP50_GRAPHQL = MicroProfileActions.MP50
+                    .addFeature("mpGraphQL-2.0")
+                    .build(MicroProfileActions.MP50_ID + "_GraphQL_20");
+    
+    public static final FeatureSet MP60_GRAPHQL = MicroProfileActions.MP60
+                    .addFeature("mpGraphQL-2.0")
+                    .build(MicroProfileActions.MP60_ID + "_GraphQL_20");
+    
+    public static final Set<FeatureSet> ALL;
+    static {
+        ALL = new HashSet<>(MicroProfileActions.ALL);
+        ALL.add(MP33_GRAPHQL);
+        ALL.add(MP40_GRAPHQL);
+        ALL.add(MP50_GRAPHQL);
+        ALL.add(MP60_GRAPHQL);
     }
+    
+    @ClassRule
+    public static RepeatTests r = RepeatActions.repeat(null, TestMode.LITE, ALL,
+                                                             MP33_GRAPHQL,
+                                                             MP40_GRAPHQL,
+                                                             MP50_GRAPHQL,
+                                                             MP60_GRAPHQL);
+    
     public static void addSmallRyeGraphQLClientLibraries(WebArchive webArchive) {
         File libs = new File("publish/shared/resources/smallryeGraphQLClient/");
         webArchive.addAsLibraries(libs.listFiles());

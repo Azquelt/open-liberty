@@ -36,17 +36,21 @@ public class WidgetQueryResponse {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("WidgetQueryResponse[").append(System.lineSeparator()).append("  data");
-        if (data == null || data.getAllWidgets() == null) {
-            sb.append("null");
+        sb.append("WidgetQueryResponse[").append(System.lineSeparator()).append("  data : ");
+        if (data == null) {
+            sb.append("null").append(System.lineSeparator());
         } else {
-            for (Widget w : data.getAllWidgets()) {
-                sb.append(" ").append(w);
-            }
+            sb.append("[").append(System.lineSeparator());
+            sb.append("    allWidgets:                  ").append(data.getAllWidgets()).append(System.lineSeparator());
+            sb.append("    allWidgetsSet:               ").append(data.getAllWidgetsSet()).append(System.lineSeparator());
+            sb.append("    allWidgetsUnableToSerialize: ").append(data.getAllWidgetsUnableToSerialize()).append(System.lineSeparator());
+            sb.append("  ]").append(System.lineSeparator());
         }
-        sb.append("]");
-        if (errors != null) {
-            sb.append(System.lineSeparator()).append("  errors [");
+        sb.append("  errors : ");
+        if (errors == null) {
+            sb.append("null").append(System.lineSeparator());
+        } else {
+            sb.append("[").append(System.lineSeparator());
             for (Error e : errors) {
                 sb.append("    {").append(System.lineSeparator());
                 sb.append("      message : ").append(e.getMessage()).append(System.lineSeparator());
@@ -54,7 +58,7 @@ public class WidgetQueryResponse {
                 sb.append("      extensions : ").append(e.getExtensions()).append(System.lineSeparator());
                 sb.append("    }").append(System.lineSeparator());
             }
-            sb.append("]");
+            sb.append("  ]");
         }
         return sb.toString();
     }

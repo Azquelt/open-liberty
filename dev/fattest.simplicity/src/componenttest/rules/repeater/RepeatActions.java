@@ -12,7 +12,7 @@ package componenttest.rules.repeater;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import componenttest.custom.junit.runner.Mode.TestMode;
@@ -45,7 +45,7 @@ public class RepeatActions {
      * @return                          A RepeatTests instance
      */
     public static RepeatTests repeat(String server, TestMode otherFeatureSetsTestMode, Set<FeatureSet> allFeatureSets, FeatureSet firstFeatureSet, FeatureSet... otherFeatureSets) {
-        Set<FeatureSet> others = new HashSet<>(Arrays.asList(otherFeatureSets));
+        List<FeatureSet> others = Arrays.asList(otherFeatureSets);
         return repeat(server, otherFeatureSetsTestMode, allFeatureSets, firstFeatureSet, others);
     }
 
