@@ -10,11 +10,17 @@
  *******************************************************************************/
 package com.ibm.ws.microprofile.rest.client.fat;
 
+import static org.junit.Assert.assertEquals;
+
+import java.io.BufferedReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.Arrays;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import com.ibm.websphere.simplicity.ShrinkHelper;
@@ -29,6 +35,7 @@ import componenttest.rules.repeater.MicroProfileActions;
 import componenttest.rules.repeater.RepeatTests;
 import componenttest.topology.impl.LibertyServer;
 import componenttest.topology.utils.FATServletClient;
+import componenttest.topology.utils.HttpUtils;
 import mpRestClient10.handleresponses.ClientTestServlet;
 
 @RunWith(FATRunner.class)
@@ -75,9 +82,9 @@ public class HandleResponsesTest extends FATServletClient {
 
         ShrinkHelper.defaultDropinApp(server, appName, "mpRestClient10.handleresponses");
         if (JakartaEE9Action.isActive()) {
-            server.changeFeatures(Arrays.asList("componenttest-2.0", "mpRestClient-3.0", "ssl-1.0", "jsonb-2.0"));
+            server.changeFeatures(Arrays.asList("componenttest-2.0", "mpRestClient-3.0", "ssl-1.0", "jsonb-2.0", "restfulWS-3.0"));
         } else if (JakartaEE10Action.isActive()) {
-            server.changeFeatures(Arrays.asList("componenttest-2.0", "mpRestClient-3.0", "ssl-1.0", "jsonb-3.0", "servlet-6.0"));
+            server.changeFeatures(Arrays.asList("componenttest-2.0", "mpRestClient-3.0", "ssl-1.0", "jsonb-3.0", "servlet-6.0", "restfulWS-3.1"));
         }
         server.startServer();
         server.waitForStringInLog("CWWKO0219I.*ssl"); // CWWKO0219I: TCP Channel defaultHttpEndpoint-ssl has been started and is now listening for requests on host *  (IPv6) port 8020.
@@ -87,5 +94,22 @@ public class HandleResponsesTest extends FATServletClient {
     public static void afterClass() throws Exception {
         server.stopServer("CWWKE1102W");  //ignore server quiesce timeouts due to slow test machines
         remoteAppServer.stopServer("CWWKE1102W");
+    }
+    
+    @Test
+    public void test307ViaRest() throws Exception {
+        StringBuilder sBuilder = new StringBuilder("http://").append(server.getHostname())
+                        .append(":")
+                        .append(server.getHttpDefaultPort())
+                        .append("/")
+                        .append(appName + "/HandleResponses");
+
+        HttpURLConnection con;
+
+        con = HttpUtils.getHttpConnection(new URL(sBuilder.toString()), HttpURLConnection.HTTP_OK, 10);
+        BufferedReader br = HttpUtils.getConnectionStream(con);
+        String line = br.readLine();
+        
+        assertEquals("OK", line);
     }
 }

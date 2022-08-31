@@ -13,6 +13,7 @@ package mpRestClient10.handleresponses;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static componenttest.rules.repeater.MicroProfileActions.*;
 
@@ -30,6 +31,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.core.Response;
 
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
+import org.hamcrest.Matchers;
 import org.junit.Test;
 
 import componenttest.annotation.SkipForRepeat;
@@ -134,5 +136,12 @@ public class ClientTestServlet extends FATServlet {
         Widget entity = r.readEntity(Widget.class);
         assertNotNull(entity);
         assertEquals("Whiteboard", entity.getName());
+    }
+    
+    @Test
+    public void test307() {
+        Response r = builder.build(RedirectClient.class).getRedirected(307);
+        assertEquals(307, r.getStatus());
+        assertThat(r.getHeaderString("Location"), Matchers.endsWith("/redirect/target"));
     }
 }
