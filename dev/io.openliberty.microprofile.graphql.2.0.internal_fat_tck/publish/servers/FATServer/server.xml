@@ -11,6 +11,7 @@
         <feature>componenttest-2.0</feature>
         <feature>localConnector-1.0</feature>
         <feature>mpGraphQL-2.0</feature>
+        <feature>cdi-3.0</feature> <!-- EE Feature to force running on EE9/EE10 -->
         <feature>arquillian-support-jakarta-2.1</feature>
     </featureManager>
 

@@ -10,16 +10,24 @@
  *******************************************************************************/
 package org.eclipse.microprofile.graphql.tck;
 
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import componenttest.annotation.AllowedFFDC;
 import componenttest.annotation.Server;
 import componenttest.custom.junit.runner.FATRunner;
+import componenttest.custom.junit.runner.Mode.TestMode;
+import componenttest.rules.repeater.FeatureSet;
+import componenttest.rules.repeater.MicroProfileActions;
+import componenttest.rules.repeater.RepeatActions;
+import componenttest.rules.repeater.RepeatTests;
 import componenttest.topology.impl.LibertyServer;
 import componenttest.topology.utils.MvnUtils;
 
@@ -30,7 +38,25 @@ import componenttest.topology.utils.MvnUtils;
 @RunWith(FATRunner.class)
 public class GraphQLTckPackageTest {
 
-    @Server("FATServer")
+    private static final String SERVER_NAME = "FATServer";
+
+    public static final FeatureSet MP50_GRAPHQL = MicroProfileActions.MP50.addFeature("mpGraphQL-2.0")
+            .build(MicroProfileActions.MP50_ID + "_GraphQL_20");
+
+    public static final FeatureSet MP60_GRAPHQL = MicroProfileActions.MP60.addFeature("mpGraphQL-2.0")
+            .build(MicroProfileActions.MP60_ID + "_GraphQL_20");
+
+    public static final Set<FeatureSet> ALL;
+    static {
+        ALL = new HashSet<>(MicroProfileActions.ALL);
+        ALL.add(MP50_GRAPHQL);
+        ALL.add(MP60_GRAPHQL);
+    }
+
+    @ClassRule
+    public static RepeatTests r = RepeatActions.repeat(SERVER_NAME, TestMode.LITE, ALL, MP50_GRAPHQL, MP60_GRAPHQL);
+
+    @Server(SERVER_NAME)
     public static LibertyServer server;
 
     @BeforeClass
