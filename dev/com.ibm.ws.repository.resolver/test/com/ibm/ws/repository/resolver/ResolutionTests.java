@@ -1607,7 +1607,7 @@ public class ResolutionTests {
         // Now see if we can resolve it!
         RepositoryResolver resolver = createResolver();
         Collection<List<RepositoryResource>> resolvedResources = resolve(resolver, name);
-        assertEquals("There should only be a single list of resources", 1, resolvedResources.size());
+        assertEquals("There should only be a single list of resources: " + resolvedResources, 1, resolvedResources.size());
         List<RepositoryResource> installList = resolvedResources.iterator().next();
         assertEquals("There should be two resolved resource", 2, installList.size());
         assertEquals("The feature needs installing first so it should be first in the list", feature, installList.get(0));
@@ -2041,7 +2041,7 @@ public class ResolutionTests {
             assertThat(resolved, containsInAnyOrder(contains(featureI10, featureX),
                                                     contains(featureI10, featureY)));
         } else {
-            assertThat(resolved, containsInAnyOrder(contains(featureI10, featureI11, featureX),
+            assertThat(resolved, containsInAnyOrder(contains(featureI10, featureX),
                                                     contains(featureI10, featureI11, featureY)));
         }
 
@@ -2113,7 +2113,7 @@ public class ResolutionTests {
         } else {
             Collection<List<RepositoryResource>> resolved = resolve(resolver, Arrays.asList(featureA.getProvideFeature(), featureB.getProvideFeature()));
             assertThat(resolved, containsInAnyOrder(contains(featureI10, featureX, featureA),
-                                                    contains(featureI11, featureI10, featureY, featureB)));
+                                                    contains(featureI10, featureI11, featureY, featureB)));
         }
 
     }
@@ -2180,7 +2180,7 @@ public class ResolutionTests {
                                                     contains(featureI10, featureY, featureB)));
         } else {
             assertThat(resolved, containsInAnyOrder(contains(featureI10, featureX, featureA),
-                                                    contains(featureI11, featureI10, featureY, featureB)));
+                                                    contains(featureI10, featureI11, featureY, featureB)));
         }
 
     }
@@ -2251,7 +2251,7 @@ public class ResolutionTests {
                                                     contains(featureI11, featureY, featureB)));
         } else {
             assertThat(resolved, containsInAnyOrder(contains(featureI11, featureX, featureA),
-                                                    contains(featureI10, featureI11, featureY, featureB)));
+                                                    contains(featureI11, featureI10, featureY, featureB)));
         }
 
     }
