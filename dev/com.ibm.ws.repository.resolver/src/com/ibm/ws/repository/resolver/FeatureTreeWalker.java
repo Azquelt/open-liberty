@@ -67,18 +67,6 @@ public class FeatureTreeWalker {
         this.getFeatureByNameFunction = getFeatureByNameFunction;
     }
 
-    @Deprecated
-    public FeatureTreeWalker(KernelResolverRepository repository) {
-        allFeaturesSupplier = repository::getAllFeatures;
-        getFeatureByNameFunction = repository::getFeature;
-    }
-
-    @Deprecated
-    public FeatureTreeWalker(Map<String, ProvisioningFeatureDefinition> resolvedFeatureMap) {
-        allFeaturesSupplier = resolvedFeatureMap::values;
-        getFeatureByNameFunction = resolvedFeatureMap::get;
-    }
-
     /**
      * Perform a breadth first walk
      *
@@ -149,6 +137,14 @@ public class FeatureTreeWalker {
         return this;
     }
 
+    /**
+     * This method is called by the walker to get the children of a given feature
+     * <p>
+     * We look up and return the features dependencies as it's children
+     *
+     * @param feature the feature
+     * @return the feature's children
+     */
     private List<ProvisioningFeatureDefinition> getChildren(ProvisioningFeatureDefinition feature) {
         List<ProvisioningFeatureDefinition> result = new ArrayList<>();
         for (FeatureResource dependency : feature.getConstituents(SubsystemContentType.FEATURE_TYPE)) {
@@ -161,7 +157,7 @@ public class FeatureTreeWalker {
             result.addAll(children);
         }
 
-        if (useAutofeatureProvisionAsDependency && feature.isAutoFeature()) {
+        if (useAutofeatureProvisionAsDependency) {
             result.addAll(CapabilityMatching.findFeaturesSatisfyingCapability(feature, allFeaturesSupplier.get()));
         }
 

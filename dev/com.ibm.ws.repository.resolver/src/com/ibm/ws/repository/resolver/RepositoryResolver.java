@@ -230,8 +230,8 @@ public class RepositoryResolver {
         }
     }
 
-    void initializeResolverRepository(Collection<ProductDefinition> installDefintion, ResolutionMode mode) {
-        resolverRepository = new KernelResolverRepository(installDefintion, repoConnections, mode);
+    void initializeResolverRepository(Collection<ProductDefinition> installDefintion) {
+        resolverRepository = new KernelResolverRepository(installDefintion, repoConnections);
         resolverRepository.addInstalledFeatures(installedFeatures);
         resolverRepository.addFeatures(repoFeatures);
     }
@@ -357,21 +357,25 @@ public class RepositoryResolver {
 
     Collection<List<RepositoryResource>> resolve(Collection<String> toResolve, ResolutionMode resolutionMode) throws RepositoryResolutionException {
         initResolve();
-        initializeResolverRepository(installDefinition, resolutionMode);
+        initializeResolverRepository(installDefinition);
 
         processNames(toResolve);
         findAutofeatureDependencies();
 
         if (resolutionMode == ResolutionMode.DETECT_CONFLICTS) {
+            // Call the kernel resolver to determine the features needed
             resolveFeaturesAsSet(resolutionMode);
         } else {
-            resolveFeaturesBasic();
             // Resolve all dependencies of installed features
+            resolveFeaturesBasic();
         }
 
         // Basic resolve auto-features satisfied by installed + resolved features
         resolveAutoFeatures();
 
+        // Find any any features which aren't direct dependencies of a requested feature
+        // Can happen if resolveAsSet is used to install some features
+        // and then resolve is used to install more features in the same server
         computeAdditionalInstallListRoots();
 
         Collection<List<RepositoryResource>> installLists = createInstallLists();

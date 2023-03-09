@@ -31,7 +31,6 @@ import com.ibm.ws.kernel.feature.provisioning.HeaderElementDefinition;
 import com.ibm.ws.kernel.feature.provisioning.ProvisioningFeatureDefinition;
 import com.ibm.ws.kernel.feature.provisioning.SubsystemContentType;
 import com.ibm.ws.repository.common.enums.InstallPolicy;
-import com.ibm.ws.repository.resolver.internal.ResolutionMode;
 import com.ibm.ws.repository.resources.EsaResource;
 
 /**
@@ -42,14 +41,12 @@ import com.ibm.ws.repository.resources.EsaResource;
 public class KernelResolverEsa implements ProvisioningFeatureDefinition {
 
     private final EsaResource esaResource;
-    private final ResolutionMode resolutionMode;
 
-    public KernelResolverEsa(EsaResource esaResource, ResolutionMode resolutionMode) {
+    public KernelResolverEsa(EsaResource esaResource) {
         if (esaResource == null) {
             throw new NullPointerException();
         }
         this.esaResource = esaResource;
-        this.resolutionMode = resolutionMode;
     }
 
     /**
@@ -82,6 +79,9 @@ public class KernelResolverEsa implements ProvisioningFeatureDefinition {
 
     @Override
     public Visibility getVisibility() {
+        if (esaResource.getVisibility() == null) {
+            return Visibility.PRIVATE;
+        }
         switch (esaResource.getVisibility()) {
             case PUBLIC:
                 return Visibility.PUBLIC;
