@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-2.0/
- * 
+ *
  * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
@@ -38,7 +38,6 @@ import com.ibm.ws.kernel.feature.provisioning.ProvisioningFeatureDefinition;
 import com.ibm.ws.repository.common.enums.ResourceType;
 import com.ibm.ws.repository.connections.ProductDefinition;
 import com.ibm.ws.repository.resolver.RepositoryResolutionException.MissingRequirement;
-import com.ibm.ws.repository.resolver.internal.ResolutionMode;
 import com.ibm.ws.repository.resolver.internal.kernel.KernelResolverEsa;
 import com.ibm.ws.repository.resources.EsaResource;
 import com.ibm.ws.repository.resources.RepositoryResource;
@@ -162,7 +161,7 @@ public class RepositoryResolverTest {
     }
 
     @Test
-    public void testPopulateMaxDistanceMapTolerates() {
+    public void testCreateInstallListWithTolerates() {
         EsaResourceWritable featureA = WritableResourceFactory.createEsa(null);
         featureA.setProvideFeature("com.example.featureA-1.0");
         featureA.addRequireFeatureWithTolerates("com.example.featureB-1.0", Arrays.asList("1.5", "2.0"));
@@ -188,21 +187,28 @@ public class RepositoryResolverTest {
 
         RepositoryResolver resolver = testResolver().withResolvedFeature(featureA, featureB, featureC12, featureC15, featureD, featureE).build();
 
-        Map<String, Integer> distanceMap = new HashMap<>();
-        resolver.populateMaxDistanceMap(distanceMap, "com.example.featureA-1.0", 0, new HashSet<ProvisioningFeatureDefinition>(), new ArrayList<MissingRequirement>());
+//        Map<String, Integer> distanceMap = new HashMap<>();
+//        resolver.populateMaxDistanceMap(distanceMap, "com.example.featureA-1.0", 0, new HashSet<ProvisioningFeatureDefinition>(), new ArrayList<MissingRequirement>());
+//
+//        assertThat(distanceMap, hasEntry("com.example.featureA-1.0", 0));
+//        assertThat(distanceMap, hasEntry("com.example.featureB-2.0", 1)); // Note that we've picked featureB-2.0 from the tolerated versions
+//        assertThat(distanceMap, hasEntry("com.example.featureC-1.2", 2)); // Note that we've picked featureC-1.2 rather than featureC-1.5 because 1.2 is earlier in the tolerates list
+//        assertThat(distanceMap, hasEntry("com.example.featureD", 3)); // Note that featureD has distance of 3, even though featureA depends directly on featureD
+//        assertThat(distanceMap.entrySet(), hasSize(4));
 
-        assertThat(distanceMap, hasEntry("com.example.featureA-1.0", 0));
-        assertThat(distanceMap, hasEntry("com.example.featureB-2.0", 1)); // Note that we've picked featureB-2.0 from the tolerated versions
-        assertThat(distanceMap, hasEntry("com.example.featureC-1.2", 2)); // Note that we've picked featureC-1.2 rather than featureC-1.5 because 1.2 is earlier in the tolerates list
-        assertThat(distanceMap, hasEntry("com.example.featureD", 3)); // Note that featureD has distance of 3, even though featureA depends directly on featureD
-        assertThat(distanceMap.entrySet(), hasSize(4));
+        List<RepositoryResource> installList = resolver.createInstallList("com.example.featureA-1.0");
+        assertThat(installList, contains(featureD, // Note that featureD is first because featureC depends on it, even though featureA also depends directly on it
+                                         featureC15,
+                                         featureC12,
+                                         featureB, // Note we've picked featureB-2.0 and not worried that featureB-1.0 and 1.5 aren't present
+                                         featureA));
 
-        distanceMap = new HashMap<>();
-        resolver.populateMaxDistanceMap(distanceMap, "com.example.featureC-1.5", 0, new HashSet<ProvisioningFeatureDefinition>(), new ArrayList<MissingRequirement>());
-
-        assertThat(distanceMap, hasEntry("com.example.featureC-1.5", 0));
-        assertThat(distanceMap, hasEntry("com.example.featureD", 1));
-        assertThat(distanceMap.entrySet(), hasSize(2));
+//        distanceMap = new HashMap<>();
+//        resolver.populateMaxDistanceMap(distanceMap, "com.example.featureC-1.5", 0, new HashSet<ProvisioningFeatureDefinition>(), new ArrayList<MissingRequirement>());
+//
+//        assertThat(distanceMap, hasEntry("com.example.featureC-1.5", 0));
+//        assertThat(distanceMap, hasEntry("com.example.featureD", 1));
+//        assertThat(distanceMap.entrySet(), hasSize(2));
     }
 
     @SuppressWarnings("unchecked")
@@ -291,19 +297,14 @@ public class RepositoryResolverTest {
     }
 
     private static ResolverBuilder testResolver() {
-        return new ResolverBuilder(ResolutionMode.IGNORE_CONFLICTS);
+        return new ResolverBuilder();
     }
 
     private static class ResolverBuilder {
-        final ResolutionMode resolutionMode;
         List<ProvisioningFeatureDefinition> installedFeatures = new ArrayList<>();
         List<EsaResource> repoFeatures = new ArrayList<>();
         List<SampleResource> repoSamples = new ArrayList<>();
         Map<String, ProvisioningFeatureDefinition> resolvedFeatures = new HashMap<>();
-
-        public ResolverBuilder(ResolutionMode resolutionMode) {
-            this.resolutionMode = resolutionMode;
-        }
 
         public ResolverBuilder withFeature(EsaResource... esa) {
             repoFeatures.addAll(Arrays.asList(esa));
@@ -318,7 +319,7 @@ public class RepositoryResolverTest {
         public ResolverBuilder withResolvedFeature(EsaResource... esas) {
             repoFeatures.addAll(Arrays.asList(esas));
             for (EsaResource esa : esas) {
-                resolvedFeatures.put(esa.getProvideFeature(), new KernelResolverEsa(esa, resolutionMode));
+                resolvedFeatures.put(esa.getProvideFeature(), new KernelResolverEsa(esa));
             }
             return this;
         }
@@ -339,7 +340,7 @@ public class RepositoryResolverTest {
         public RepositoryResolver build() {
             RepositoryResolver resolver = new RepositoryResolver(installedFeatures, repoFeatures, repoSamples);
             resolver.initResolve();
-            resolver.initializeResolverRepository(Collections.<ProductDefinition> emptySet(), resolutionMode);
+            resolver.initializeResolverRepository(Collections.<ProductDefinition> emptySet());
             resolver.resolvedFeatures = resolvedFeatures;
             return resolver;
         }
