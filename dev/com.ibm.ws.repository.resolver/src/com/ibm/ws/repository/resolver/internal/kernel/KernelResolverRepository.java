@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.logging.Logger;
 
 import org.osgi.framework.Version;
 
@@ -41,6 +42,8 @@ import com.ibm.ws.repository.resources.internal.RepositoryResourceImpl;
  */
 @SuppressWarnings("restriction") // Ignore restricted use of RepositoryResourceImpl, it's ok here because the resolver doesn't run inside OSGi
 public class KernelResolverRepository implements FeatureResolver.Repository {
+
+    private static final Logger logger = Logger.getLogger("com.ibm.ws.install");
 
     /**
      * Sorts features in descending order by their versions (i.e. most recent version first)
@@ -221,6 +224,8 @@ public class KernelResolverRepository implements FeatureResolver.Repository {
         if (nameToNonApplicableResources.containsKey(featureName)) {
             return; // We've already cached all features for this name
         }
+
+        logger.fine("Resolver: querying repository for feature name " + featureName);
 
         if (repositoryConnection != null) {
             List<ApplicableToProduct> nonApplicable = new ArrayList<>();

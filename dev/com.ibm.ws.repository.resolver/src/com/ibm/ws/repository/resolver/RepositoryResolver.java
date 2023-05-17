@@ -12,6 +12,7 @@
  *******************************************************************************/
 package com.ibm.ws.repository.resolver;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Logger;
 
 import com.ibm.ws.kernel.feature.internal.FeatureResolverImpl;
 import com.ibm.ws.kernel.feature.provisioning.ProvisioningFeatureDefinition;
@@ -50,6 +52,8 @@ import com.ibm.ws.repository.resources.SampleResource;
  * Note: Some methods have package visibility to allow unit testing
  */
 public class RepositoryResolver {
+
+    private static final Logger logger = Logger.getLogger("com.ibm.ws.install");
 
     // ---
     // Static data which won't change after initialization
@@ -204,6 +208,10 @@ public class RepositoryResolver {
      */
     @SuppressWarnings("unchecked")
     void fetchFromRepository(Collection<ProductDefinition> installDefinition) throws RepositoryException {
+
+        logger.fine("Fetching available features from repository");
+        long startTime = System.nanoTime();
+
         Collection<ResourceType> interestingTypes = new HashSet<ResourceType>();
         interestingTypes.add(ResourceType.FEATURE);
         interestingTypes.add(ResourceType.OPENSOURCE);
@@ -227,6 +235,9 @@ public class RepositoryResolver {
         if (osiSamples != null) {
             repoSamples.addAll(osiSamples);
         }
+
+        Duration duration = Duration.ofNanos(System.nanoTime() - startTime);
+        logger.fine("Fetched available features in " + duration);
     }
 
     void initializeResolverRepository(Collection<ProductDefinition> installDefintion) {
@@ -367,31 +378,45 @@ public class RepositoryResolver {
     }
 
     Collection<List<RepositoryResource>> resolve(Collection<String> toResolve, ResolutionMode resolutionMode) throws RepositoryResolutionException {
+        logger.fine("Resolver: start resolve, mode: " + resolutionMode + ", names to resolve: " + toResolve);
+        long startTime = System.nanoTime();
+
         initResolve();
         initializeResolverRepository(installDefinition);
+        logger.fine("Resolver: done initialization");
 
         processNames(toResolve);
+        logger.fine("Resolver: processed names");
+
+        logger.fine("Resolver: Count of names to resolve: " + featureNamesToResolve.size());
 
         if (resolutionMode == ResolutionMode.DETECT_CONFLICTS) {
             // Call the kernel resolver to determine the features needed
             resolveFeaturesAsSet();
+            logger.fine("Resolver: Resolved features as set. Count: " + resolvedFeatures.size());
         } else {
             // Resolve all dependencies of installed features
             resolveFeaturesBasic();
+            logger.fine("Resolver: Resolved features basic. Count: " + resolvedFeatures.size());
             // Basic resolve auto-features satisfied by installed + resolved features
             resolveAutoFeatures();
+            logger.fine("Resolver: Resolved autofeatures. Count: " + resolvedFeatures.size());
         }
 
         // Find any any features which aren't direct dependencies of a requested feature
         // Can happen if resolveAsSet is used to install some features
         // and then resolve is used to install more features in the same server
         computeAdditionalInstallListRoots();
+        logger.fine("Resolver: additional install list roots computed. Count: " + additionalInstallListRoots.size());
 
         Collection<List<RepositoryResource>> installLists = createInstallLists();
+        logger.fine("Resolver: Created install lists");
 
         reportErrors();
-        return installLists;
 
+        Duration duration = Duration.ofNanos(System.nanoTime() - startTime);
+        logger.fine("Resolver: Resolve completed in " + duration + ", result: " + installLists);
+        return installLists;
     }
 
     /**
@@ -470,7 +495,10 @@ public class RepositoryResolver {
      */
     void resolveFeaturesAsSet() {
         FeatureResolver resolver = new FeatureResolverImpl();
+        long startTime = System.nanoTime();
         Result result = resolver.resolveFeatures(resolverRepository, kernelFeatures, featureNamesToResolve, Collections.<String> emptySet(), false);
+        Duration duration = Duration.ofNanos(System.nanoTime() - startTime);
+        logger.finer("Resolver: kernel resolve completed in " + duration);
 
         featureConflicts.putAll(result.getConflicts());
 
@@ -494,6 +522,9 @@ public class RepositoryResolver {
      * - {@link #resourcesWrongProduct}
      */
     void resolveFeaturesBasic() {
+
+        long startTime = System.nanoTime();
+
         // For each feature to resolve
         //   Look up the PFD
         //   walk the dependency tree, adding each PFD to the resolvedFeatures set
@@ -510,6 +541,8 @@ public class RepositoryResolver {
                              .walkDepthFirst(feature);
         }
 
+        logger.fine("Resolver: resolved all requested features");
+
         // Walk dependencies of all installed features as well to ensure we install all their tolerated dependencies
         for (ProvisioningFeatureDefinition feature : installedFeatures) {
             FeatureTreeWalker.walkOver(resolverRepository)
@@ -518,6 +551,11 @@ public class RepositoryResolver {
                              .useAutofeatureProvisionAsDependency(false)
                              .walkDepthFirst(feature);
         }
+
+        logger.fine("Resolver: resolved all dependencies of installed features");
+
+        Duration duration = Duration.ofNanos(System.nanoTime() - startTime);
+        logger.fine("Resolver: basic resolve completed in " + duration);
     }
 
     /**
@@ -576,12 +614,15 @@ public class RepositoryResolver {
      * This method finds such features and works out a minimal set to use as roots for install lists to ensure that every resolved feature gets installed
      */
     private void computeAdditionalInstallListRoots() {
+        logger.fine("Resolver: computing install roots");
         HashSet<ProvisioningFeatureDefinition> additionalRootCandidates = new HashSet<>(resolvedFeatures.values());
         FeatureTreeWalker removeCandidateWalker = FeatureTreeWalker.walkOver(resolvedFeatures)
                                                                    .forEach(additionalRootCandidates::remove);
 
         // Remove already installed features
         additionalRootCandidates.removeAll(installedFeatures);
+
+        logger.fine("Resolver: removed installed features. Candidates: " + additionalRootCandidates.size());
 
         // Remove dependencies of requested features and samples
         for (String name : featureNamesToResolve) {
@@ -592,12 +633,16 @@ public class RepositoryResolver {
             removeCandidateWalker.walkDepthFirst(feature);
         }
 
+        logger.fine("Resolver: removed requested feature dependencies. Candidates: " + additionalRootCandidates.size());
+
         // Remove dependencies of autofeatures
         for (ProvisioningFeatureDefinition feature : resolvedFeatures.values()) {
             if (feature.isAutoFeature() && feature instanceof KernelResolverEsa) {
                 removeCandidateWalker.walkDepthFirst(feature);
             }
         }
+
+        logger.fine("Resolver: removed dependencies of autofeatures. Candidates: " + additionalRootCandidates.size());
 
         // For each remaining candidate, remove all of its dependencies, but not itself
         // Candidates will still be removed if they are dependencies of another candidate
@@ -612,6 +657,8 @@ public class RepositoryResolver {
                 additionalRootCandidates.add(feature);
             }
         }
+
+        logger.fine("Resolver: minified remaining install roots. Candidates: " + additionalRootCandidates.size());
 
         additionalInstallListRoots = new ArrayList<>(additionalRootCandidates);
     }
