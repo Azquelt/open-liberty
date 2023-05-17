@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-2.0/
- * 
+ *
  * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.logging.Logger;
 
 import org.osgi.framework.Version;
 
@@ -41,6 +42,8 @@ import com.ibm.ws.repository.resources.internal.RepositoryResourceImpl;
  * Implementation of {@link FeatureResolver.Repository} which is backed by a collection of {@link EsaResource}s.
  */
 public class KernelResolverRepository implements FeatureResolver.Repository {
+
+    private static final Logger logger = Logger.getLogger("com.ibm.ws.install");
 
     /**
      * Sorts features in descending order by their versions (i.e. most recent version first)
@@ -134,7 +137,7 @@ public class KernelResolverRepository implements FeatureResolver.Repository {
      * Checks whether {@code featureList} contains a feature with the same name and version as {@code feature}.
      *
      * @param featureList the list of features
-     * @param feature the feature
+     * @param feature     the feature
      * @return {@code true} if {@code featureList} contains a feature with the same symbolic name and version as {@code feature}, otherwise {@code false}
      */
     private boolean listContainsDuplicate(List<ProvisioningFeatureDefinition> featureList, ProvisioningFeatureDefinition feature) {
@@ -225,6 +228,8 @@ public class KernelResolverRepository implements FeatureResolver.Repository {
         if (nameToNonApplicableResources.containsKey(featureName)) {
             return; // We've already cached all features for this name
         }
+
+        logger.fine("Resolver: querying repository for feature name " + featureName);
 
         if (repositoryConnection != null) {
             List<ApplicableToProduct> nonApplicable = new ArrayList<>();
@@ -323,7 +328,7 @@ public class KernelResolverRepository implements FeatureResolver.Repository {
      * When a preferred version is set, {@link #getFeature(String)} will return the preferred version if available, unless another version is already installed.
      *
      * @param featureName the short or symbolic feature name
-     * @param version the version
+     * @param version     the version
      */
     public void setPreferredVersion(String featureName, String version) {
         if (!symbolicNameToFeature.containsKey(featureName)) {
@@ -355,7 +360,7 @@ public class KernelResolverRepository implements FeatureResolver.Repository {
      * If no preferred version has been configured for this symbolic name, or if the preferred version cannot be found in the list, return the latest version.
      *
      * @param symbolicName the symbolic name of the feature
-     * @param featureList the list of features, which should all have the same symbolic name
+     * @param featureList  the list of features, which should all have the same symbolic name
      * @return the best feature from the list
      */
     private ProvisioningFeatureDefinition getPreferredVersion(String symbolicName, List<ProvisioningFeatureDefinition> featureList) {

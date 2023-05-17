@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-2.0/
- * 
+ *
  * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
@@ -12,6 +12,7 @@
  *******************************************************************************/
 package com.ibm.ws.repository.resolver;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -21,6 +22,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Logger;
 
 import com.ibm.ws.kernel.feature.internal.FeatureResolverImpl;
 import com.ibm.ws.kernel.feature.provisioning.FeatureResource;
@@ -52,6 +54,8 @@ import com.ibm.ws.repository.resources.SampleResource;
  * Note: Some methods have package visibility to allow unit testing
  */
 public class RepositoryResolver {
+
+    private static final Logger logger = Logger.getLogger("com.ibm.ws.install");
 
     // ---
     // Static data which won't change after initialization
@@ -152,8 +156,8 @@ public class RepositoryResolver {
      *
      * @param installDefinition Information about the product(s) installed such as ID and edition. Must not be <code>null</code>.
      * @param installedFeatures The features that are installed. Must not be <code>null</code>.
-     * @param installedIFixes No longer used, parameter retained for backwards compatibility
-     * @param repoConnections The connection to the repository
+     * @param installedIFixes   No longer used, parameter retained for backwards compatibility
+     * @param repoConnections   The connection to the repository
      * @throws RepositoryException If there is a connection error with the Massive repository
      * @see ProductInfo#getAllProductInfo()
      * @see IFixUtils#getInstalledIFixes(java.io.File, com.ibm.ws.product.utility.CommandConsole)
@@ -177,8 +181,8 @@ public class RepositoryResolver {
      * Allows resolution to be tested without connecting to a repository
      *
      * @param installedFeatures the features which are installed
-     * @param repoFeatures the features available in the repository
-     * @param repoSamples the samples available in the repository
+     * @param repoFeatures      the features available in the repository
+     * @param repoSamples       the samples available in the repository
      */
     RepositoryResolver(Collection<ProvisioningFeatureDefinition> installedFeatures,
                        Collection<? extends EsaResource> repoFeatures,
@@ -201,6 +205,8 @@ public class RepositoryResolver {
      */
     @SuppressWarnings("unchecked")
     void fetchFromRepository(Collection<ProductDefinition> installDefinition) throws RepositoryException {
+        logger.fine("Fetching available features from repository");
+        long startTime = System.nanoTime();
         Collection<ResourceType> interestingTypes = new HashSet<ResourceType>();
         interestingTypes.add(ResourceType.FEATURE);
         interestingTypes.add(ResourceType.OPENSOURCE);
@@ -224,6 +230,7 @@ public class RepositoryResolver {
         if (osiSamples != null) {
             repoSamples.addAll(osiSamples);
         }
+        logger.fine("Fetched available features in " + Duration.ofNanos(System.nanoTime() - startTime));
     }
 
     void initializeResolverRepository(Collection<ProductDefinition> installDefintion, ResolutionMode mode) {
@@ -266,10 +273,10 @@ public class RepositoryResolver {
      * want that, you may want to use {@link #resolveAsSet(Collection)} instead.</p>
      *
      * @param toResolve A collection of the identifiers of the resources to resolve. It should be in the form:</br>
-     *            <code>{name}/{version}</code></br>
-     *            <p>Where the <code>{name}</code> can be either the symbolic name, short name or lower case short name of the resource and <code>/{version}</code> is
-     *            optional. The
-     *            collection may contain a mixture of symbolic names and short names. Must not be <code>null</code> or empty.</p>
+     *                      <code>{name}/{version}</code></br>
+     *                      <p>Where the <code>{name}</code> can be either the symbolic name, short name or lower case short name of the resource and <code>/{version}</code> is
+     *                      optional. The
+     *                      collection may contain a mixture of symbolic names and short names. Must not be <code>null</code> or empty.</p>
      * @return <p>A collection of ordered lists of {@link RepositoryResource}s to install. Each list represents a collection of resources that must be installed together or not
      *         at
      *         all. They should be installed in the iteration order of the list(s). Note that if a resource is required by multiple different resources then it will appear in
@@ -324,10 +331,10 @@ public class RepositoryResolver {
      * javaee-7.0 and javaee-8.0 contain features which conflict with each other (and other versions are not tolerated).
      *
      * @param toResolve A collection of the identifiers of the resources to resolve. It should be in the form:</br>
-     *            <code>{name}/{version}</code></br>
-     *            <p>Where the <code>{name}</code> can be either the symbolic name, short name or lower case short name of the resource and <code>/{version}</code> is
-     *            optional. The
-     *            collection may contain a mixture of symbolic names and short names. Must not be <code>null</code> or empty.</p>
+     *                      <code>{name}/{version}</code></br>
+     *                      <p>Where the <code>{name}</code> can be either the symbolic name, short name or lower case short name of the resource and <code>/{version}</code> is
+     *                      optional. The
+     *                      collection may contain a mixture of symbolic names and short names. Must not be <code>null</code> or empty.</p>
      * @return <p>A collection of ordered lists of {@link RepositoryResource}s to install. Each list represents a collection of resources that must be installed together or not
      *         at
      *         all. They should be installed in the iteration order of the list(s). Note that if a resource is required by multiple different resources then it will appear in
@@ -352,19 +359,30 @@ public class RepositoryResolver {
     }
 
     Collection<List<RepositoryResource>> resolve(Collection<String> toResolve, ResolutionMode resolutionMode) throws RepositoryResolutionException {
+        logger.fine("Resolver: start resolve, mode: " + resolutionMode + ", names to resolve: " + toResolve);
+        long startTime = System.nanoTime();
         initResolve();
         initializeResolverRepository(installDefinition, resolutionMode);
+        logger.fine("Resolver: done initialization");
 
         processNames(toResolve);
+        logger.fine("Resolver: processed names");
         findAutofeatureDependencies();
+        logger.fine("Resolver: found autofeatures");
         if (resolutionMode == ResolutionMode.IGNORE_CONFLICTS) {
             requireInstalledFeaturesWhenResolving();
         }
 
+        logger.fine("Resolver: Count of names to resolve: " + featureNamesToResolve.size());
         resolveFeatures(resolutionMode);
+        logger.fine("Resolver: Resolved features. Count: " + resolvedFeatures.size());
         Collection<List<RepositoryResource>> installLists = createInstallLists();
+        logger.fine("Resolver: Created install lists");
 
         reportErrors();
+
+        Duration duration = Duration.ofNanos(System.nanoTime() - startTime);
+        logger.fine("Resolver: Resolve completed in " + duration + ", result: " + installLists);
         return installLists;
 
     }
@@ -465,7 +483,11 @@ public class RepositoryResolver {
     void resolveFeatures(ResolutionMode mode) {
         boolean allowMultipleVersions = mode == ResolutionMode.IGNORE_CONFLICTS ? true : false;
         FeatureResolver resolver = new FeatureResolverImpl();
+
+        long startTime = System.nanoTime();
+        Duration duration = Duration.ofNanos(System.nanoTime() - startTime);
         Result result = resolver.resolveFeatures(resolverRepository, kernelFeatures, featureNamesToResolve, Collections.<String> emptySet(), allowMultipleVersions);
+        logger.finer("Resolver: kernel resolve completed in " + duration);
 
         featureConflicts.putAll(result.getConflicts());
 
@@ -677,10 +699,10 @@ public class RepositoryResolver {
      * Having done this, {@code distanceMap.keySet()} gives the set of all the dependencies of com.example.featureA. {@code distanceMap.get("com.example.featureB")} gives
      * the length of the longest dependency chain from featureA to featureB.
      *
-     * @param maxDistanceMap the map to be populated
-     * @param featureName the current feature
-     * @param currentDistance the distance to use for the current feature
-     * @param currentStack the set of feature names already in the current dependency chain (used to detect loops)
+     * @param maxDistanceMap      the map to be populated
+     * @param featureName         the current feature
+     * @param currentDistance     the distance to use for the current feature
+     * @param currentStack        the set of feature names already in the current dependency chain (used to detect loops)
      * @param missingRequirements the list which missing requirements are to be added
      * @return true if all requirements were found, false otherwise
      */
