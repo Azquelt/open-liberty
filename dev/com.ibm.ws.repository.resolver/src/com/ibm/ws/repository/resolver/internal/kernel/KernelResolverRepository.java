@@ -12,6 +12,7 @@
  *******************************************************************************/
 package com.ibm.ws.repository.resolver.internal.kernel;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -225,7 +226,7 @@ public class KernelResolverRepository implements FeatureResolver.Repository {
             return; // We've already cached all features for this name
         }
 
-        logger.fine("Resolver: querying repository for feature name " + featureName);
+        long startTime = System.nanoTime();
 
         if (repositoryConnection != null) {
             List<ApplicableToProduct> nonApplicable = new ArrayList<>();
@@ -240,6 +241,8 @@ public class KernelResolverRepository implements FeatureResolver.Repository {
 
             nameToNonApplicableResources.put(featureName, nonApplicable);
         }
+        Duration duration = Duration.ofNanos(System.nanoTime() - startTime);
+        logger.fine("Resolver: queried repository for feature name " + featureName + " in " + duration);
     }
 
     /**
