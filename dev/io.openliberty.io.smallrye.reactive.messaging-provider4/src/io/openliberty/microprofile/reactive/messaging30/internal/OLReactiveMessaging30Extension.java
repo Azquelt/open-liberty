@@ -32,6 +32,7 @@ import io.smallrye.reactive.messaging.providers.extension.ReactiveMessagingExten
 import io.smallrye.reactive.messaging.providers.impl.ConfiguredChannelFactory;
 import io.smallrye.reactive.messaging.providers.impl.ConnectorFactories;
 import io.smallrye.reactive.messaging.providers.impl.InternalChannelRegistry;
+import io.smallrye.reactive.messaging.providers.metrics.MetricDecorator;
 import io.smallrye.reactive.messaging.providers.wiring.Wiring;
 import jakarta.enterprise.event.Observes;
 import jakarta.enterprise.inject.spi.AnnotatedType;
@@ -71,7 +72,7 @@ public class OLReactiveMessaging30Extension extends ReactiveMessagingExtension i
         //addAnnotatedType(ContextDecorator.class, discovery, beanManager);
 
         //io.smallrye.reactive.messaging.providers.metrics - These depend on Micrometer so we're excluding them
-//        addAnnotatedType(MetricDecorator.class, discovery, beanManager);
+        addAnnotatedType(MetricDecorator.class, discovery, beanManager);
 //        addAnnotatedType(MicrometerDecorator.class, discovery, beanManager);
 
         //io.smallrye.reactive.messaging.providers.wiring
