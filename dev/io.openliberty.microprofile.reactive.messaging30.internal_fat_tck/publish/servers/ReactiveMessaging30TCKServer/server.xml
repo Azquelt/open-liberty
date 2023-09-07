@@ -12,6 +12,7 @@
         <feature>componenttest-2.0</feature>
         <feature>localConnector-1.0</feature>
         <feature>cdi-4.0</feature>
+        <feature>mpMetrics-5.0</feature>
         <feature>mpReactiveMessaging-3.0</feature>
         <feature>arquillian-support-jakarta-2.1</feature>
     </featureManager>

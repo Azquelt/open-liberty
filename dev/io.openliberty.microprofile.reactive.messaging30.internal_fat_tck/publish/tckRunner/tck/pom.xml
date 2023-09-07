@@ -96,13 +96,21 @@
             <groupId>org.eclipse.microprofile.config</groupId>
             <artifactId>microprofile-config-api</artifactId>
             <version>3.0</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.eclipse.microprofile.metrics</groupId>
+            <artifactId>microprofile-metrics-api</artifactId>
+            <version>4.0</version>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>jakarta.enterprise</groupId>
             <artifactId>jakarta.enterprise.cdi-api</artifactId>
-            <version>4.0.0</version>
-            <scope>provided</scope>
+            <version>3.0.1</version>
+            <scope>test</scope>
         </dependency>
 
         <dependency>
@@ -208,6 +216,9 @@
                     </systemPropertyVariables>
                     <testSourceDirectory>${basedir}${file.separarator}src${file.separarator}main${file.separarator}java${file.separarator}</testSourceDirectory>
                     <dependenciesToScan>org.eclipse.microprofile.reactive.messaging:microprofile-reactive-messaging-tck</dependenciesToScan>
+                    <includes>
+                    <include>**/MetricsTest*</include>
+                    </includes>
                 </configuration>
             </plugin>
         </plugins>
