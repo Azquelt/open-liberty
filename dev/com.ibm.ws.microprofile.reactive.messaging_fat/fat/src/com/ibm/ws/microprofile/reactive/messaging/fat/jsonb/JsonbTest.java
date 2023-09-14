@@ -4,7 +4,7 @@
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/legal/epl-2.0/
- * 
+ *
  * SPDX-License-Identifier: EPL-2.0
  *
  * Contributors:
@@ -12,8 +12,6 @@
  *******************************************************************************/
 package com.ibm.ws.microprofile.reactive.messaging.fat.jsonb;
 
-import com.ibm.ws.microprofile.reactive.messaging.fat.suite.ReactiveMessagingActions;
-import componenttest.rules.repeater.RepeatTests;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
 import org.jboss.shrinkwrap.api.spec.WebArchive;
 import org.junit.AfterClass;
@@ -23,12 +21,13 @@ import org.junit.runner.RunWith;
 
 import com.ibm.websphere.simplicity.ShrinkHelper;
 import com.ibm.websphere.simplicity.ShrinkHelper.DeployOptions;
-import com.ibm.ws.microprofile.reactive.messaging.fat.kafka.framework.AbstractDeliveryBean;
 import com.ibm.ws.microprofile.reactive.messaging.fat.kafka.framework.AbstractReceptionBean;
+import com.ibm.ws.microprofile.reactive.messaging.fat.suite.ReactiveMessagingActions;
 
 import componenttest.annotation.Server;
 import componenttest.annotation.TestServlet;
 import componenttest.custom.junit.runner.FATRunner;
+import componenttest.rules.repeater.RepeatTests;
 import componenttest.topology.impl.LibertyServer;
 import componenttest.topology.utils.FATServletClient;
 
@@ -49,7 +48,7 @@ public class JsonbTest extends FATServletClient {
     public static void setup() throws Exception {
         WebArchive war = ShrinkWrap.create(WebArchive.class, APP_NAME + ".war")
                         .addPackage(JsonbServlet.class.getPackage())
-                        .addClasses(AbstractReceptionBean.class, AbstractDeliveryBean.class);
+                        .addPackage(AbstractReceptionBean.class.getPackage());
 
         ShrinkHelper.exportDropinAppToServer(server, war, DeployOptions.SERVER_ONLY);
         server.startServer();
