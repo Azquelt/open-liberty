@@ -55,11 +55,11 @@ import componenttest.topology.impl.LibertyServer;
 import componenttest.topology.utils.HttpRequest;
 import io.jaegertracing.api_v2.Model.Span;
 import io.openliberty.microprofile.telemetry.internal.apps.agentconfig.AgentConfigTestResource;
+import io.openliberty.microprofile.telemetry.internal.suite.TelemetryActions;
 import io.openliberty.microprofile.telemetry.internal.utils.TestConstants;
 import io.openliberty.microprofile.telemetry.internal.utils.TestUtils;
 import io.openliberty.microprofile.telemetry.internal.utils.jaeger.JaegerContainer;
 import io.openliberty.microprofile.telemetry.internal.utils.jaeger.JaegerQueryClient;
-import io.openliberty.microprofile.telemetry.internal.suite.FATSuite;
 
 /**
  * Test all the ways the agent can be configured
@@ -78,7 +78,12 @@ public class AgentConfigTest {
     public static JaegerContainer jaegerContainer = new JaegerContainer().withLogConsumer(new SimpleLogConsumer(JaegerBaseTest.class, "jaeger"));
 
     @ClassRule
-    public static RepeatTests r = FATSuite.allMPRepeats("spanTestServer");
+    public static RepeatTests r = TelemetryActions.repeatForFiles("publish/files/TelemetryAgentConfig",
+                                                                  MicroProfileActions.MP61,
+//                                                                  MicroProfileActions.MP60,
+                                                                  TelemetryActions.MP41_MPTEL11
+//                                                                  TelemetryActions.MP14_MPTEL11
+    );
 
     public static JaegerQueryClient client;
 
@@ -97,7 +102,7 @@ public class AgentConfigTest {
     @Before
     public void resetServer() throws Exception {
         // Replace any test files with their original versions
-        copyToServer("server.xml-original", "server.xml");
+        copyToServer("server-original.xml", "server.xml");
         copyToServer("jvm.options-original", "jvm.options");
         copyToServer("bootstrap.properties-original", "bootstrap.properties");
         deleteFromServer("agent-config.properties");
@@ -284,7 +289,7 @@ public class AgentConfigTest {
                                     .addAsResource(app2Config, "META-INF/microprofile-config.properties");
         ShrinkHelper.exportAppToServer(server, app2, DeployOptions.SERVER_ONLY);
 
-        copyToServer("server.xml-multi-app", "server.xml");
+        copyToServer("server-multi-app.xml", "server.xml");
 
         server.startServer();
 
