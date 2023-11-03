@@ -12,8 +12,8 @@
  *******************************************************************************/
 package io.openliberty.microprofile.telemetry.internal.apps.agentconfig;
 
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.Path;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
 
 /**
  * A test rest client

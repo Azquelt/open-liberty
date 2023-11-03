@@ -38,6 +38,7 @@ import io.openliberty.microprofile.telemetry.internal.utils.TestConstants;
 import io.openliberty.microprofile.telemetry.internal.utils.jaeger.JaegerContainer;
 import io.openliberty.microprofile.telemetry.internal.utils.jaeger.JaegerQueryClient;
 import io.openliberty.microprofile.telemetry.internal.utils.otelCollector.OtelCollectorContainer;
+import io.openliberty.microprofile.telemetry.internal.suite.FATSuite;
 
 /**
  * Test exporting traces to a Jaeger server with OpenTelemetry Collector

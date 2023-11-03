@@ -56,6 +56,7 @@ import io.openliberty.microprofile.telemetry.internal.utils.zipkin.ZipkinQueryCl
 import io.openliberty.microprofile.telemetry.internal.utils.zipkin.ZipkinSpan;
 import io.openliberty.microprofile.telemetry.internal.utils.zipkin.ZipkinSpanMatcher;
 import io.opentelemetry.semconv.trace.attributes.SemanticAttributes;
+import io.openliberty.microprofile.telemetry.internal.suite.FATSuite;
 
 /**
  * Test exporting traces to a Zipkin server with the OpenTelemetry Collector
@@ -71,7 +72,7 @@ public class ZipkinOtelCollectorTest {
     public static Network network = Network.newNetwork();
 
     @ClassRule
-    public static RepeatTests r = MicroProfileActions.repeat("spanTestServer", MicroProfileActions.MP61, MicroProfileActions.MP60);
+    public static RepeatTests r = FATSuite.allMPRepeats("spanTestServer");
 
     private static final Class<?> c = ZipkinTest.class;
 

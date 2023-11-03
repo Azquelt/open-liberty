@@ -42,6 +42,7 @@ import io.openliberty.microprofile.telemetry.internal.utils.TestConstants;
 import io.openliberty.microprofile.telemetry.internal.utils.zipkin.ZipkinContainer;
 import io.openliberty.microprofile.telemetry.internal.utils.zipkin.ZipkinQueryClient;
 import io.openliberty.microprofile.telemetry.internal.utils.zipkin.ZipkinSpan;
+import io.openliberty.microprofile.telemetry.internal.suite.FATSuite;
 import io.opentelemetry.api.trace.SpanKind;
 
 /**
@@ -58,7 +59,7 @@ public class CrossFeatureZipkinTest {
     public static ZipkinContainer zipkinContainer = new ZipkinContainer().withLogConsumer(new SimpleLogConsumer(ZipkinTest.class, "zipkin"));
 
     @ClassRule
-    public static RepeatTests r = MicroProfileActions.repeat("crossFeatureTelemetryServer", MicroProfileActions.MP61, MicroProfileActions.MP60);
+    public static RepeatTests r = FATSuite.allMPRepeats("crossFeatureTelemetryServer");
 
     public static ZipkinQueryClient client;
 

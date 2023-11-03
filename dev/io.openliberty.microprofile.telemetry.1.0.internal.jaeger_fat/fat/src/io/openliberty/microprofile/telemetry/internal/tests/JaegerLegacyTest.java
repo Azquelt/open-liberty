@@ -33,6 +33,7 @@ import io.openliberty.microprofile.telemetry.internal.apps.spanTest.TestResource
 import io.openliberty.microprofile.telemetry.internal.utils.TestConstants;
 import io.openliberty.microprofile.telemetry.internal.utils.jaeger.JaegerContainer;
 import io.openliberty.microprofile.telemetry.internal.utils.jaeger.JaegerQueryClient;
+import io.openliberty.microprofile.telemetry.internal.suite.FATSuite;
 
 /**
  * Test exporting traces to a Jaeger server with the legacy Jaeger protocol
@@ -45,7 +46,7 @@ public class JaegerLegacyTest extends JaegerBaseTest {
     public static JaegerContainer jaegerContainer = new JaegerContainer().withLogConsumer(new SimpleLogConsumer(JaegerBaseTest.class, "jaeger"));
 
     @ClassRule
-    public static RepeatTests r = MicroProfileActions.repeat("spanTestServer", MicroProfileActions.MP61, MicroProfileActions.MP60);
+    public static RepeatTests r = FATSuite.allMPRepeats("spanTestServer");
 
     public static JaegerQueryClient client;
 

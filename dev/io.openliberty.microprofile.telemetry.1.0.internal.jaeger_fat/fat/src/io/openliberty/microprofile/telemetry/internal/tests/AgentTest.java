@@ -61,6 +61,8 @@ import io.openliberty.microprofile.telemetry.internal.utils.TestConstants;
 import io.openliberty.microprofile.telemetry.internal.utils.jaeger.JaegerContainer;
 import io.openliberty.microprofile.telemetry.internal.utils.jaeger.JaegerQueryClient;
 import io.opentelemetry.semconv.trace.attributes.SemanticAttributes;
+import io.openliberty.microprofile.telemetry.internal.suite.FATSuite;
+
 
 /**
  * Test mpTelemetry running with the OpenTelemetry Java Agent enabled
@@ -79,7 +81,7 @@ public class AgentTest {
     public static JaegerContainer jaegerContainer = new JaegerContainer().withLogConsumer(new SimpleLogConsumer(JaegerBaseTest.class, "jaeger"));
 
     @ClassRule
-    public static RepeatTests r = MicroProfileActions.repeat("spanTestServer", MicroProfileActions.MP61, MicroProfileActions.MP60);
+    public static RepeatTests r = FATSuite.allMPRepeats("TelemetryAgent");
 
     public static JaegerQueryClient client;
 
