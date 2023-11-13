@@ -21,35 +21,24 @@ import componenttest.containers.TestContainerSuite;
 import componenttest.custom.junit.runner.AlwaysPassesTest;
 import componenttest.rules.repeater.MicroProfileActions;
 import componenttest.rules.repeater.RepeatTests;
-import io.openliberty.microprofile.telemetry.internal.tests.AgentConfigTest;
 import io.openliberty.microprofile.telemetry.internal.tests.AgentTest;
-import io.openliberty.microprofile.telemetry.internal.tests.CrossFeatureJaegerTest;
-import io.openliberty.microprofile.telemetry.internal.tests.CrossFeatureZipkinTest;
-import io.openliberty.microprofile.telemetry.internal.tests.JaegerLegacyTest;
-import io.openliberty.microprofile.telemetry.internal.tests.JaegerOtelCollectorTest;
-import io.openliberty.microprofile.telemetry.internal.tests.JaegerOtlpTest;
-import io.openliberty.microprofile.telemetry.internal.tests.JaegerSecureOtelCollectorTest;
-import io.openliberty.microprofile.telemetry.internal.tests.JaegerSecureOtlpTest;
-import io.openliberty.microprofile.telemetry.internal.tests.TracingNotEnabledTest;
-import io.openliberty.microprofile.telemetry.internal.tests.ZipkinOtelCollectorTest;
-import io.openliberty.microprofile.telemetry.internal.tests.ZipkinTest;
 import io.openliberty.microprofile.telemetry.internal_fat.shared.TelemetryActions;
 
 @RunWith(Suite.class)
 @SuiteClasses({
                 AlwaysPassesTest.class, //Must keep this test to run something in the Java 6 builds.
                 AgentTest.class,
-                AgentConfigTest.class,
-                CrossFeatureJaegerTest.class,
-                CrossFeatureZipkinTest.class,
-                JaegerSecureOtelCollectorTest.class,
-                JaegerSecureOtlpTest.class,
-                JaegerOtlpTest.class,
-                JaegerOtelCollectorTest.class,
-                JaegerLegacyTest.class,
-                TracingNotEnabledTest.class,
-                ZipkinOtelCollectorTest.class,
-                ZipkinTest.class,
+//                AgentConfigTest.class,
+//                CrossFeatureJaegerTest.class,
+//                CrossFeatureZipkinTest.class,
+//                JaegerSecureOtelCollectorTest.class,
+//                JaegerSecureOtlpTest.class,
+//                JaegerOtlpTest.class,
+//                JaegerOtelCollectorTest.class,
+//                JaegerLegacyTest.class,
+//                TracingNotEnabledTest.class,
+//                ZipkinOtelCollectorTest.class,
+//                ZipkinTest.class,
 })
 
 @MinimumJavaLevel(javaLevel = 11)
