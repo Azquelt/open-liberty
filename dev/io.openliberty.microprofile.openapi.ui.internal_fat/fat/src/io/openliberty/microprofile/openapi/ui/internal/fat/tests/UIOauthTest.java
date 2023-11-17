@@ -12,6 +12,7 @@ package io.openliberty.microprofile.openapi.ui.internal.fat.tests;
 
 import static componenttest.selenium.SeleniumWaits.waitForElement;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
 
 import java.time.Duration;
 import java.util.Arrays;
@@ -80,11 +81,11 @@ public class UIOauthTest {
      */
     @Rule
     public BrowserWebDriverContainer<?> chrome = new BrowserWebDriverContainer<>().withCapabilities(new ChromeOptions())
-            .withAccessToHost(true)
-            .withRecordingMode(BrowserWebDriverContainer.VncRecordingMode.RECORD_FAILING,
-                    Props.getInstance().getFileProperty(Props.DIR_LOG),
-                    VncRecordingFormat.MP4)
-            .withLogConsumer(new SimpleLogConsumer(UIBasicTest.class, "selenium-driver"));
+                                                                                  .withAccessToHost(true)
+                                                                                  .withRecordingMode(BrowserWebDriverContainer.VncRecordingMode.RECORD_FAILING,
+                                                                                                     Props.getInstance().getFileProperty(Props.DIR_LOG),
+                                                                                                     VncRecordingFormat.MP4)
+                                                                                  .withLogConsumer(new SimpleLogConsumer(UIBasicTest.class, "selenium-driver"));
 
     private RemoteWebDriver driver;
 
@@ -179,7 +180,9 @@ public class UIOauthTest {
         WebElement getOperation = waitForElement(driver, By.id("operations-default-get_test"));
         //check that the operation is "unlocked"
         //we will use the lock object later to check that it has been updated
-        WebElement lock = getOperation.findElement(By.cssSelector("button.authorization__btn.unlocked"));
+        WebElement lock = getOperation.findElement(By.cssSelector("button.authorization__btn"));
+        WebElement lockSvg = lock.findElement(By.tagName("svg"));
+        assertThat(lockSvg.getAttribute("class"), equalTo("unlocked"));
 
         //Check the Authorize button is available and click it
         WebElement authorizeButton = waitForElement(driver, By.xpath("//span[contains(.,'Authorize')]"));
@@ -246,7 +249,8 @@ public class UIOauthTest {
         oauthModalHead.findElement(By.cssSelector("button.close-modal")).click();
 
         //Check the lock status on operation - should be "locked"
-        assertThat("Check that lock button is now in 'locked' state", lock.getAttribute("class").equals("authorization__btn locked"));
+        lockSvg = lock.findElement(By.tagName("svg"));
+        assertThat("Check that lock button is now in 'locked' state", lockSvg.getAttribute("class"), equalTo("locked"));
     }
 
 }
