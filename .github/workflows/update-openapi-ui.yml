@@ -33,17 +33,27 @@ jobs:
       run: |
         git clone --depth 1 -b v${SWAGGER_UI_VERSION} https://github.com/swagger-api/swagger-ui.git swagger-ui-src
         rm src/style/original/*
-        rm src/style/core/plugins/json-schema-2020-12/components/*
-        rm src/style/core/plugins/oas31/components/*
+        rm -r src/style/core
         cp swagger-ui-src/src/style/* src/style/original
-        cp -r swagger-ui-src/src/core/plugins/json-schema-2020-12/components/* src/style/core/plugins/json-schema-2020-12/components
-        cp -r swagger-ui-src/src/core/plugins/oas31/components/* src/style/core/plugins/oas31/components
+        shopt -s globstar
+        cd swagger-ui-src/src
+        cp --parents core/**/*.scss ../../src/style
+        cd ../..
         rm -r swagger-ui-src
     - name: Build OpenAPI UI
       run: npm run build -- --mode=production
+    - name: Commit and push
+      if: ${{ env.GITHUB_REF_NAME != 'integration' }}
+      run: |
+        git add .
+        git config user.name "$GITHUB_ACTOR"
+        git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+        git commit -m "Update Swagger UI TO $SWAGGER_UI_VERSION [auto]"
+        git push
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@18f7dc018cc2cd597073088f7c7591b9d1c02672 #3.14.0
       id: create-pr
+      if: ${{ env.GITHUB_REF_NAME == 'integration' }}
       with:
         branch: update-swagger-ui-${{ env.SWAGGER_UI_VERSION }}
         title: Update Swagger UI to ${{ env.SWAGGER_UI_VERSION }}
