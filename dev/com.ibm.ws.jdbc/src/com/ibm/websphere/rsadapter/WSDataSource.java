@@ -83,4 +83,6 @@ public interface WSDataSource extends DataSource {
      *         phase commit, otherwise false.
      */
     boolean isXADataSource();
+    
+    String getDisplayId();
 }

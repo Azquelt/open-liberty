@@ -15,7 +15,6 @@ package io.openliberty.data.internal.persistence.cdi;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedParameterizedType;
 import java.lang.reflect.GenericArrayType;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.ParameterizedType;
@@ -51,6 +50,7 @@ import org.osgi.framework.ServiceReference;
 import com.ibm.websphere.ras.Tr;
 import com.ibm.websphere.ras.TraceComponent;
 import com.ibm.websphere.ras.annotation.Trivial;
+import com.ibm.websphere.rsadapter.WSDataSource;
 import com.ibm.ws.ffdc.annotation.FFDCIgnore;
 
 import io.openliberty.data.internal.persistence.EntityManagerBuilder;
@@ -77,6 +77,7 @@ import jakarta.enterprise.inject.spi.BeanManager;
 import jakarta.enterprise.inject.spi.CDI;
 import jakarta.enterprise.inject.spi.Extension;
 import jakarta.enterprise.inject.spi.ProcessAnnotatedType;
+import jakarta.enterprise.inject.spi.ProcessBeanAttributes;
 import jakarta.enterprise.inject.spi.WithAnnotations;
 import jakarta.inject.Qualifier;
 import jakarta.persistence.Entity;
@@ -149,6 +150,13 @@ public class DataExtension implements Extension, PrivilegedAction<DataExtensionP
         }
     }
 
+    public void augmentDataSourceBeans(@Observes ProcessBeanAttributes<DataSource> beanAttrs) {
+        //TODO: potentially add some more protection here
+        if (!beanAttrs.getBeanAttributes().getTypes().contains(WSDataSource.class)) {
+            beanAttrs.configureBeanAttributes().addType(WSDataSource.class);
+        }
+    }
+
     @FFDCIgnore(NamingException.class)
     public void afterBeanDiscovery(@Observes AfterBeanDiscovery event, BeanManager beanMgr) {
         final boolean trace = TraceComponent.isAnyTracingEnabled();
@@ -199,18 +207,22 @@ public class DataExtension implements Extension, PrivilegedAction<DataExtensionP
                                         // force initialization by using the proxy
                                         resource.getLoginTimeout();
 
-                                        // org.jboss.weld.interceptor.util.proxy.TargetInstanceProxy.weld_getTargetInstance()
-                                        Object wsJdbcDataSource = resource.getClass() //
-                                                        .getDeclaredMethod("weld_getTargetInstance") //
-                                                        .invoke(resource);
+                                        WSDataSource wsJdbcDataSource = (WSDataSource) resource;
+                                        dataStore = wsJdbcDataSource.getDisplayId();
+                                        System.out.println(dataStore);
 
-                                        // TODO would need to add getDisplayId if we want to try this approach,
-                                        // but for now, we are blocked by weld_getTargetInstance returning null.
-                                        // com.ibm.ws.rsadapter.jdbc.WSJdbcDataSource.getDisplayId()
-                                        dataStore = (String) wsJdbcDataSource.getClass() //
-                                                        .getMethod("getDisplayId") //
-                                                        .invoke(wsJdbcDataSource);
-                                    } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | SecurityException
+                                        // org.jboss.weld.interceptor.util.proxy.TargetInstanceProxy.weld_getTargetInstance()
+//                                        Object wsJdbcDataSource = resource.getClass() //
+//                                                        .getDeclaredMethod("weld_getTargetInstance") //
+//                                                        .invoke(resource);
+//
+//                                        // TODO would need to add getDisplayId if we want to try this approach,
+//                                        // but for now, we are blocked by weld_getTargetInstance returning null.
+//                                        // com.ibm.ws.rsadapter.jdbc.WSJdbcDataSource.getDisplayId()
+//                                        dataStore = (String) wsJdbcDataSource.getClass() //
+//                                                        .getMethod("getDisplayId") //
+//                                                        .invoke(wsJdbcDataSource);
+                                    } catch (IllegalArgumentException | SecurityException
                                                     | SQLException x) {
                                         // unexpected type of data source
                                         throw new UnsupportedOperationException //

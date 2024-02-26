@@ -26,7 +26,7 @@ import javax.sql.DataSource;
  * TODO enable this repository if we find a way to support qualified resource accessor methods
  * that are used to supply the data source.
  */
-//@Repository
+@Repository
 public interface QualifiedDSRepo {
     @ResourceQualifier
     DataSource dataSource();

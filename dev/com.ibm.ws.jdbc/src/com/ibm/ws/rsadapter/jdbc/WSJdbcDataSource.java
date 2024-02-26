@@ -433,4 +433,9 @@ public class WSJdbcDataSource extends WSJdbcWrapper implements DataSource,
         throw new SQLFeatureNotSupportedException();
     }
 
+    @Override
+    public String getDisplayId() {
+        return dsConfig.get().id;
+    }
+
 }

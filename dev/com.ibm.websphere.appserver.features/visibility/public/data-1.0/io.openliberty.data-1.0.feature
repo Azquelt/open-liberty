@@ -12,7 +12,9 @@ IBM-API-Package: \
   jakarta.data.exceptions; type="spec",\
   jakarta.data.metamodel; type="spec",\
   jakarta.data.page; type="spec",\
-  jakarta.data.repository; type="spec"
+  jakarta.data.repository; type="spec",\
+  com.ibm.ws.rsadapter.jdbc; type="internal",\
+  com.ibm.websphere.rsadapter; type="internal
 Subsystem-Name: Jakarta Data 1.0
 #TODO io.openliberty.jakartaeePlatform-11.0
 -features=\
