@@ -12,18 +12,13 @@
  *******************************************************************************/
 package com.ibm.ws.cdi.impl.weld;
 
-import java.util.Collections;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Stack;
 
-import com.ibm.websphere.ras.annotation.Trivial;
 import com.ibm.ws.cdi.CDIException;
 import com.ibm.ws.cdi.internal.interfaces.WebSphereBeanDeploymentArchive;
 
 public class BeanDeploymentArchiveVisitor {
-
-    private final Stack<PeakableFilteredIterator> stack = new Stack<PeakableFilteredIterator>();
 
     /**
      * This method implements a depth first search over all BDAs (excluding Runtime Extensions) and their children
@@ -42,82 +37,48 @@ public class BeanDeploymentArchiveVisitor {
      *
      */
     public void visit(WebSphereBeanDeploymentArchive root) throws CDIException {
-        List<WebSphereBeanDeploymentArchive> list = Collections.singletonList(root);
-        stack.add(new PeakableFilteredIterator(list.iterator()));
+        Stack<StackElement> stack = new Stack<>();
+
+        if (!root.hasBeenVisited()) {
+            stack.push(new StackElement(root, root.visit()));
+        }
 
         while (!stack.isEmpty()) {
-            PeakableFilteredIterator iter = stack.peek();
+            StackElement e = stack.peek();
 
-            if (iter.hasElement()) {
-                WebSphereBeanDeploymentArchive bda = iter.peek();
-                if (!bda.hasBeenVisited()) {
-                    Iterator<WebSphereBeanDeploymentArchive> children = bda.visit();
-                    stack.add(new PeakableFilteredIterator(children));
-                } else {
-                    if (!bda.hasBeenScanned()) {
-                        bda.scan();
-                    }
-                    iter.progress();
-                }
+            WebSphereBeanDeploymentArchive child = nextUnvisitedBda(e.childIterator);
+            if (child != null) {
+                // If there are unvisited children, they must be placed on the stack first
+                // so that they will be scanned before us
+                stack.push(new StackElement(child, child.visit()));
             } else {
+                // When all our direct children have been visited and scanned, we can be scanned
+                if (!e.bda.hasBeenVisited()) {
+                    e.bda.visit();
+                }
                 stack.pop();
             }
         }
     }
 
-    /*
-     * This class is a non generalised decorator over an iterator of BDAs. It has some notable differences
-     * in behaviour from a proper iterator. All of which are to KISS rather than track enough state to implement
-     * peek() and next() while honouring the iterator contract.
-     */
-    private class PeakableFilteredIterator {
-        private WebSphereBeanDeploymentArchive bda = null;
-        private final Iterator<WebSphereBeanDeploymentArchive> iterator;
-
-        @Trivial
-        public PeakableFilteredIterator(Iterator<WebSphereBeanDeploymentArchive> iterator) {
-            this.iterator = iterator;
-            if (iterator.hasNext()) {
-                progress();
+    private static WebSphereBeanDeploymentArchive nextUnvisitedBda(Iterator<WebSphereBeanDeploymentArchive> i) {
+        while (i.hasNext()) {
+            WebSphereBeanDeploymentArchive bda = i.next();
+            if (!bda.hasBeenVisited()) {
+                return bda;
             }
         }
+        return null;
+    }
 
-        /*
-         * returns the nth element in the iterator that matches the filter or null if n is greater than the number
-         * of valid bdas in the underlying collection. Where n = the number of invocations of progress()
-         * (the first invocation happens on construction)
-         *
-         * Note that an element is only tested by the filter once when progress() is invoked so peek() can return
-         * a non-matching element if its state changes after progress() was last invoked.
-         *
-         */
-        @Trivial
-        public WebSphereBeanDeploymentArchive peek() {
-            return bda;
+    private final class StackElement {
+        private final WebSphereBeanDeploymentArchive bda;
+        private final Iterator<WebSphereBeanDeploymentArchive> childIterator;
+
+        public StackElement(WebSphereBeanDeploymentArchive bda, Iterator<WebSphereBeanDeploymentArchive> childIterator) {
+            this.bda = bda;
+            this.childIterator = childIterator;
         }
-
-        /*
-         * @return true() if peek() will return an element, false if peek() will return null
-         */
-        @Trivial
-        public boolean hasElement() {
-            return bda != null;
-        }
-
-        /*
-         * Advances the decorated iterator to the next element that matches the filter.
-         */
-        @Trivial
-        public void progress() {
-            bda = null;
-            while (iterator.hasNext() && bda == null) {
-                WebSphereBeanDeploymentArchive maybeNextBDA = iterator.next();
-                if (!maybeNextBDA.hasBeenVisited()) {
-                    bda = maybeNextBDA;
-                }
-            }
-        }
-
     }
 
 }
