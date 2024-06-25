@@ -13,6 +13,7 @@
 package com.ibm.ws.cdi.impl.weld;
 
 import java.util.ArrayDeque;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.Iterator;
 
@@ -27,45 +28,6 @@ public class BeanDeploymentArchiveScanner {
      * <p>
      * Since the dependency graph of BDAs is cyclic this algorithm can be nondeterministic in which order mutual
      * dependencies are scanned.
-     * <p>
-     * How it works:
-     * <p>
-     * Two operations are performed on each BDA:
-     * <ul>
-     * <li>First it is <em>visited</em> - a BDA is identified as needing scanned and a list of its children is obtained.
-     * <li>Later it is <em>scanned</em> - this is when CDI actually examines the classes in the archive
-     * </ul>
-     * Each BDA stores a flag to indicate whether it has been visited or scanned. This ensures each BDA will only be visited and scanned once, no matter how many times this method
-     * is called.
-     * <p>
-     * The algorithm used:
-     *
-     * <pre>
-     * LOOP START
-     * Look for the first unvisited child of the BDA at the top of the stack
-     * - If one is found, visit it and push it onto the stack. GOTO LOOP START
-     * - If one is not found, pop the BDA off the stack and scan it. GOTO LOOP START
-     * </pre>
-     *
-     * This ensures:
-     * <ul>
-     * <li>the BDAs on the stack are those which have been visited, but not yet scanned
-     * <ul>
-     * <li>all BDAs not in the graph have either not been visited yet, or have been both visited and scanned
-     * </ul>
-     * <li>every BDA on the stack is a direct dependency of the BDA below it
-     * <ul>
-     * <li>therefore, if A depends on B, and there is no route through the dependency graph from from B back to A, B will never appear below A in the stack
-     * <li>therefore either B has already been scanned or B will be added on the stack above A
-     * <li>therefore B will be scanned before A
-     * </ul>
-     * <p>
-     * Implementation notes:
-     * <ul>
-     * <li>Java has a Stack class, but Deque is preferred for implementing stacks
-     * <li>There are probably better ways of scanning BDAs in the correct order. This algorithm replicates the old recursive logic we used to use to changing the scanning order.
-     * <li>Storing an iterator of children on the stack is a small optimization to make finding the next unvisited BDA faster. nextUnvisitedBda() could search through the list of
-     * children of the BDA from the start every time.
      *
      * @param root the BDA to start the scan from
      */
@@ -73,23 +35,27 @@ public class BeanDeploymentArchiveScanner {
         Deque<StackElement> stack = new ArrayDeque<>();
 
         if (!root.hasBeenVisited()) {
-            stack.push(new StackElement(root, root.visit()));
+            stack.push(new StackElement(Collections.singletonList(root).iterator()));
         }
 
         while (!stack.isEmpty()) {
             StackElement e = stack.peek();
 
-            WebSphereBeanDeploymentArchive child = nextUnvisitedBda(e.childIterator);
-            if (child != null) {
-                // If there are unvisited children, they are pushed onto the stack
-                // so that they will be scanned before us
-                stack.push(new StackElement(child, child.visit()));
-            } else {
-                // When all our direct children have been visited and scanned, we can be scanned
-                if (!e.bda.hasBeenScanned()) {
-                    e.bda.scan();
+            if (e.currentBda != null) {
+                // We've just popped a layer, we can now scan this BDA
+                if (!e.currentBda.hasBeenScanned()) {
+                    e.currentBda.scan();
                 }
-                stack.pop();
+                e.currentBda = null;
+            } else {
+                // We're working through the list, find the next bda to visit
+                e.currentBda = nextUnvisitedBda(e.bdas);
+                if (e.currentBda == null) {
+                    // No next bda? We've finished this stack layer
+                    stack.pop();
+                } else {
+                    stack.push(new StackElement(e.currentBda.visit()));
+                }
             }
         }
     }
@@ -111,14 +77,12 @@ public class BeanDeploymentArchiveScanner {
     }
 
     private static final class StackElement {
-        /** the BDA to be scanned when this stack element is removed from the stack */
-        private final WebSphereBeanDeploymentArchive bda;
-        /** the children of {@link #bda} which should be scanned before it is scanned */
-        private final Iterator<WebSphereBeanDeploymentArchive> childIterator;
+        private WebSphereBeanDeploymentArchive currentBda;
+        private final Iterator<WebSphereBeanDeploymentArchive> bdas;
 
-        private StackElement(WebSphereBeanDeploymentArchive bda, Iterator<WebSphereBeanDeploymentArchive> childIterator) {
-            this.bda = bda;
-            this.childIterator = childIterator;
+        private StackElement(Iterator<WebSphereBeanDeploymentArchive> bdas) {
+            this.bdas = bdas;
+            this.currentBda = null;
         }
     }
 
