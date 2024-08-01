@@ -33,7 +33,7 @@
         <repository>
             <id>sonatype</id>
             <name>sonatype repository with the staged version of the tcks</name>
-            <url>https://oss.sonatype.org/content/repositories/orgeclipsemicroprofile-1705/</url>
+            <url>https://oss.sonatype.org/content/repositories/orgeclipsemicroprofile-1719/</url>
         </repository>
     </repositories>
 
