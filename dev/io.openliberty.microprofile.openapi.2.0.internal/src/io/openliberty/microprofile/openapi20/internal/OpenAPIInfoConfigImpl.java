@@ -24,11 +24,16 @@ import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.component.annotations.Reference;
 
+import com.ibm.websphere.ras.Tr;
+import com.ibm.websphere.ras.TraceComponent;
 import com.ibm.ws.kernel.productinfo.ProductInfo;
 
 import io.openliberty.microprofile.openapi20.internal.services.OpenAPIInfoConfig;
+import io.openliberty.microprofile.openapi20.internal.utils.MessageConstants;
 
 public class OpenAPIInfoConfigImpl implements OpenAPIInfoConfig {
+
+    private static final TraceComponent tc = Tr.register(OpenAPIInfoConfigImpl.class);
 
     protected static final String INFO_KEY = "info";
     protected static final String TITLE_KEY = "title";
@@ -92,9 +97,9 @@ public class OpenAPIInfoConfigImpl implements OpenAPIInfoConfig {
         String title = (String) infoProperties.get(TITLE_KEY);
         String version = (String) infoProperties.get(VERSION_KEY);
 
-        if (title == null || version == null) {
+        if (title == null || title.trim().isEmpty() || version == null || version.trim().isEmpty()) {
             // Title and version are both required
-            // TODO: warn
+            Tr.warning(tc, MessageConstants.OPENAPI_INFO_INVALID_SERVERXML_CWWKO1683W);
             return Optional.empty();
         }
 
