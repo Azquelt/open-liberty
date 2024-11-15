@@ -24,7 +24,24 @@ import com.ibm.websphere.simplicity.log.Log;
 import componenttest.custom.junit.runner.RepeatTestFilter;
 
 /**
+ * Runs in the network space of another container and runs {@code tcpdump} to capture its network traffic
+ * <p>
+ * Has some limitations - it has to start after the other container and exit before it, so it can't capture startup or shutdown traffic.
+ * <p>
+ * Example usage:
+ * <p>
  *
+ * <pre>
+ * public static JaegerContainer jaegerContainer = new JaegerContainer().withLogConsumer(new SimpleLogConsumer(MyTest.class, "jaeger"));
+ * public static TcpDumpContainer tcpDumpContainer = new TcpDumpContainer(jaegerContainer).withLogConsumer(new SimpleLogConsumer(MyTest.class, "tcpdump"));
+ * public static RepeatTests repeat = TelemetryActions.latestTelemetryRepeats(SERVER_NAME);
+ *
+ * {@code @ClassRule}
+ * public static RuleChain chain = RuleChain.outerRule(jaegerContainer).around(tcpDumpContainer).around(repeat);
+ * </pre>
+ *
+ * <p>
+ * By default, the packet capture is output to {@code results/tcpDump-TestClass_RepeatAction}
  */
 public class TcpDumpContainer extends GenericContainer<TcpDumpContainer> {
 
@@ -34,10 +51,23 @@ public class TcpDumpContainer extends GenericContainer<TcpDumpContainer> {
     private String testName;
     private final Container<?> containerToMonitor;
 
+    /**
+     * Create a tcpdump container to monitor the given container.
+     * <p>
+     * When using this constructor, the container must be used as a test rule. If you're not using it as a test rule, use {@link #TcpDumpContainer(Container, String)} instead.
+     *
+     * @param containerToMonitor the container to capture packets from
+     */
     public TcpDumpContainer(Container<?> containerToMonitor) {
         this(containerToMonitor, null);
     }
 
+    /**
+     * Create a tcpdump container to monitor the given container.
+     *
+     * @param containerToMonitor the container to capture packets from
+     * @param testName
+     */
     public TcpDumpContainer(Container<?> containerToMonitor, String testName) {
         // Use Alpine image with tcpdump installed
         super(new ImageFromDockerfile().withDockerfileFromBuilder(builder -> builder.from(
@@ -51,6 +81,12 @@ public class TcpDumpContainer extends GenericContainer<TcpDumpContainer> {
         this.testName = testName;
     }
 
+    /**
+     * Set a different output location for the package capture file
+     *
+     * @param destination the destination path, relative to the working directory
+     * @return {@code this}
+     */
     public TcpDumpContainer withDumpFileDestination(String destination) {
         dumpFileDestination = destination;
         return this;
