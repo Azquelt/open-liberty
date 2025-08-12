@@ -71,6 +71,7 @@ public class McpServlet extends HttpServlet {
             case TOOLS_CALL -> callTool(request, resp.getWriter());
             case TOOLS_LIST -> listTools(request, resp.getWriter());
             case INITIALIZE -> initialize(request, resp.getWriter());
+            case INITIALIZED -> initialized(request, resp);
             default -> throw new IllegalArgumentException("Unexpected value: " + request.getRequestMethod());
         }
     }
@@ -130,6 +131,11 @@ public class McpServlet extends HttpServlet {
         McpInitializeResult result = new McpInitializeResult("2025-06-18", caps, info, null);
         McpResponse response = new McpResponse(request.id(), result);
         jsonb.toJson(response, writer);
+    }
+
+    private void initialized(McpRequest request, HttpServletResponse resp) {
+        // Just a notification, no response needed
+        resp.setStatus(HttpServletResponse.SC_ACCEPTED);
     }
 
 }
