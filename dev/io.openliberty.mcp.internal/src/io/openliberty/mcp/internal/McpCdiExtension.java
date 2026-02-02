@@ -18,8 +18,11 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.ibm.websphere.csi.J2EEName;
 import com.ibm.websphere.ras.Tr;
 import com.ibm.websphere.ras.TraceComponent;
+import com.ibm.ws.cdi.CDIService;
+import com.ibm.ws.kernel.service.util.ServiceCaller;
 
 import io.openliberty.mcp.annotations.Tool;
 import io.openliberty.mcp.content.ContentEncoder;
@@ -58,14 +61,15 @@ import jakarta.json.bind.JsonbConfig;
 public class McpCdiExtension implements Extension {
 
     private static final TraceComponent tc = Tr.register(McpCdiExtension.class);
+    private static final ServiceCaller<CDIService> CDI_SERVICE = new ServiceCaller<>(McpCdiExtension.class, CDIService.class);
 
     private final List<Bean<?>> encoderBeans = new ArrayList<>();
     private EncoderRegistry encoderRegistry;
-    private ConcurrentHashMap<String, ArrayList<String>> duplicateToolsMap = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<J2EEName, Map<String, ArrayList<String>>> duplicateToolsMap = new ConcurrentHashMap<>();
 
     private SchemaRegistry schemas = new SchemaRegistry();
     private Jsonb jsonb = createJsonb();
-    private ToolRegistry tools = new ToolRegistry(schemas, jsonb);
+    private ToolRegistries toolRegistries = new ToolRegistries(schemas, jsonb);
     private ModuleContext moduleContext;
 
     private static Jsonb createJsonb() {
@@ -107,11 +111,15 @@ public class McpCdiExtension implements Extension {
     void afterDeploymentValidation(@Observes AfterDeploymentValidation afterDeploymentValidation, BeanManager manager) {
         registerEncoders(manager);
 
-        boolean error = reportOnInvalidToolNames(afterDeploymentValidation) |
-                        reportOnDuplicateTools(afterDeploymentValidation) |
-                        reportOnToolArgEdgeCases(afterDeploymentValidation) |
-                        reportOnDuplicateSpecialArguments(afterDeploymentValidation) |
-                        reportOnInvalidSpecialArguments(afterDeploymentValidation);
+        boolean error = false;
+
+        for (ToolRegistry toolRegistry : toolRegistries.getAll()) {
+            error |= reportOnInvalidToolNames(afterDeploymentValidation, toolRegistry) |
+                     reportOnDuplicateTools(afterDeploymentValidation, toolRegistry) |
+                     reportOnToolArgEdgeCases(afterDeploymentValidation, toolRegistry) |
+                     reportOnDuplicateSpecialArguments(afterDeploymentValidation, toolRegistry) |
+                     reportOnInvalidSpecialArguments(afterDeploymentValidation, toolRegistry);
+        }
 
         if (error) {
             afterDeploymentValidation.addDeploymentProblem(new Exception(Tr.formatMessage(tc, "CWMCM0005E.validation.error")));
@@ -156,7 +164,7 @@ public class McpCdiExtension implements Extension {
     /**
      * @param afterDeploymentValidation
      */
-    private boolean reportOnToolArgEdgeCases(AfterDeploymentValidation afterDeploymentValidation) {
+    private boolean reportOnToolArgEdgeCases(AfterDeploymentValidation afterDeploymentValidation, ToolRegistry tools) {
         boolean foundErrors = false;
 
         for (ToolMetadata tool : tools.getAllTools()) {
@@ -184,20 +192,22 @@ public class McpCdiExtension implements Extension {
         return foundErrors;
     }
 
-    private boolean reportOnDuplicateTools(AfterDeploymentValidation afterDeploymentValidation) {
+    private boolean reportOnDuplicateTools(AfterDeploymentValidation afterDeploymentValidation, ToolRegistry tools) {
         boolean error = false;
-        // prune items that are not duplicates
-        duplicateToolsMap.entrySet().removeIf(e -> e.getValue().size() == 1);
-        for (String toolName : duplicateToolsMap.keySet()) {
-            error = true;
-            List<String> qualifiedNames = duplicateToolsMap.get(toolName);
-            Tr.error(tc, "CWMCM0004E.duplicate.tools", toolName, String.join(",", qualifiedNames));
+        for (var moduleDuplicateToolsMap : duplicateToolsMap.values()) {
+            // prune items that are not duplicates
+            moduleDuplicateToolsMap.entrySet().removeIf(e -> e.getValue().size() == 1);
+            for (String toolName : moduleDuplicateToolsMap.keySet()) {
+                error = true;
+                List<String> qualifiedNames = moduleDuplicateToolsMap.get(toolName);
+                Tr.error(tc, "CWMCM0004E.duplicate.tools", toolName, String.join(",", qualifiedNames));
+            }
         }
         return error;
 
     }
 
-    private boolean reportOnInvalidToolNames(AfterDeploymentValidation afterDeploymentValidation) {
+    private boolean reportOnInvalidToolNames(AfterDeploymentValidation afterDeploymentValidation, ToolRegistry tools) {
         boolean hasErrors = false;
         for (ToolMetadata tool : tools.getAllTools()) {
             for (var error : ToolValidation.validateToolName(tool.name())) {
@@ -211,7 +221,7 @@ public class McpCdiExtension implements Extension {
         return hasErrors;
     }
 
-    private boolean reportOnDuplicateSpecialArguments(AfterDeploymentValidation afterDeploymentValidation) {
+    private boolean reportOnDuplicateSpecialArguments(AfterDeploymentValidation afterDeploymentValidation, ToolRegistry tools) {
         AtomicBoolean error = new AtomicBoolean(false);
         for (ToolMetadata tool : tools.getAllTools()) {
             if (tool.methodMetadata().isEmpty()) {
@@ -241,7 +251,7 @@ public class McpCdiExtension implements Extension {
 
     }
 
-    private boolean reportOnInvalidSpecialArguments(AfterDeploymentValidation afterDeploymentValidation) {
+    private boolean reportOnInvalidSpecialArguments(AfterDeploymentValidation afterDeploymentValidation, ToolRegistry tools) {
         boolean error = false;
         for (ToolMetadata tool : tools.getAllTools()) {
             if (tool.methodMetadata().isEmpty()) {
@@ -261,10 +271,12 @@ public class McpCdiExtension implements Extension {
     private void registerTool(Tool tool, Bean<?> bean, AnnotatedMethod<?> method, BeanManager beanManager) {
         try {
             ToolMetadata toolmd = ToolMetadata.createFrom(tool, bean, method, beanManager, jsonb);
-            List<String> duplicatesList = duplicateToolsMap.computeIfAbsent(toolmd.name(), key -> new ArrayList<>());
+            J2EEName module = getModuleForBean(bean);
+            List<String> duplicatesList = duplicateToolsMap.computeIfAbsent(module, key -> new HashMap<>())
+                                                           .computeIfAbsent(toolmd.name(), key -> new ArrayList<>());
             duplicatesList.add(toolmd.getToolQualifiedName());
             if (duplicatesList.size() <= 1) {
-                tools.addTool(toolmd);
+                toolRegistries.getForModule(module).addTool(toolmd);
                 if (TraceComponent.isAnyTracingEnabled()) {
                     if (tc.isDebugEnabled()) {
                         Tr.debug(this, tc, "Registered tool: " + toolmd.name(), toolmd);
@@ -282,8 +294,8 @@ public class McpCdiExtension implements Extension {
         }
     }
 
-    public ToolRegistry getToolRegistry() {
-        return tools;
+    public ToolRegistry getCurrentToolRegistry() {
+        return toolRegistries.getCurrent();
     }
 
     public SchemaRegistry getSchemaRegistry() {
@@ -296,5 +308,12 @@ public class McpCdiExtension implements Extension {
 
     public EncoderRegistry getEncoderRegistry() {
         return encoderRegistry;
+    }
+
+    private J2EEName getModuleForBean(Bean<?> bean) {
+        J2EEName moduleName = CDI_SERVICE.run(cdiService -> cdiService.getModuleNameForClass(bean.getBeanClass()))
+                                         .orElseThrow(() -> new RuntimeException("No current CDIService"))
+                                         .orElseThrow(() -> new RuntimeException("No module for bean " + bean));
+        return moduleName;
     }
 }

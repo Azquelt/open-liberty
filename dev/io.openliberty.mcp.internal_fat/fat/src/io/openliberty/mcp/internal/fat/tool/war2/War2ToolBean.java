@@ -7,23 +7,31 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package io.openliberty.mcp.internal;
+package io.openliberty.mcp.internal.fat.tool.war2;
 
-import io.openliberty.mcp.internal.moduleScope.ModuleScoped;
+import io.openliberty.mcp.annotations.Tool;
 import io.openliberty.mcp.tools.ToolManager;
+import io.openliberty.mcp.tools.ToolResponse;
 import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.inject.Produces;
+import jakarta.enterprise.event.Observes;
+import jakarta.enterprise.event.Startup;
+import jakarta.inject.Inject;
 
-/**
- * Provider methods to make MCP components available as CDI beans
- */
 @ApplicationScoped
-public class McpCdiProducers {
+public class War2ToolBean {
 
-    @ModuleScoped
-    @Produces
-    private ToolManager produceToolManager(McpCdiExtension extension) {
-        return extension.getCurrentToolRegistry();
+    @Inject
+    private ToolManager toolManager;
+
+    @Tool
+    public String methodTool() {
+        return "From war2";
+    }
+
+    void startup(@Observes Startup startup) {
+        toolManager.newTool("apiTool")
+                   .setHandler(a -> ToolResponse.success("From war2"))
+                   .register();
     }
 
 }
