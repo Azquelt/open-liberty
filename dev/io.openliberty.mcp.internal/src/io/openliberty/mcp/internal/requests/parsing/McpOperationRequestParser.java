@@ -272,9 +272,11 @@ public class McpOperationRequestParser {
 
         JsonRpcRequestTO requestTO = partialReq.requestTo();
 
-        McpSession session = parseSession(partialReq);
+        // The method is checked before the session so that an unknown method, or one which was removed in this
+        // protocol version, is reported as method not found even when the session id is missing or invalid
+        RequestMethod method = parseRequestMethod(partialReq);
 
-        RequestMethod method = parseRequestMethod(requestTO);
+        McpSession session = parseSession(partialReq);
 
         validateSessionPresentIfRequired(session, method);
 
@@ -336,13 +338,15 @@ public class McpOperationRequestParser {
         return session;
     }
 
-    @FFDCIgnore(NoSuchElementException.class)
-    private RequestMethod parseRequestMethod(JsonRpcRequestTO requestTO) {
-        RequestMethod method;
-        try {
-            method = RequestMethod.getForMethodName(requestTO.method());
-        } catch (NoSuchElementException e) {
-            throw new JSONRPCException(JSONRPCErrorCode.METHOD_NOT_FOUND, List.of(requestTO.method() + " not found"));
+    /**
+     * Finds the requested method, which was already resolved during {@link #preParse}.
+     * A method which does not exist in the protocol version of the request is treated
+     * in the same way as a method which does not exist at all.
+     */
+    private RequestMethod parseRequestMethod(McpOperationPartialRequest partialReq) {
+        RequestMethod method = partialReq.method();
+        if (method == null || !method.isSupportedIn(partialReq.protocolVersion())) {
+            throw new JSONRPCException(JSONRPCErrorCode.METHOD_NOT_FOUND, List.of(partialReq.requestTo().method() + " not found"));
         }
         return method;
     }
